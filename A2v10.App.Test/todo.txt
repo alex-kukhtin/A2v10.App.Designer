@@ -1,0 +1,5 @@
+﻿
+
+1. typeName: from json
+2. model.json: add parameters
+3.

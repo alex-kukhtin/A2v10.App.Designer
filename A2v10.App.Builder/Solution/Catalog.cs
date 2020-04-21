@@ -7,21 +7,39 @@ using Newtonsoft.Json;
 
 namespace A2v10.App.Builder
 {
-	public class Catalog : ElementBase
+	/*
+	 todo:
+	 1. Index View
+	 2. Index Template
+	 3. Edit dialog,
+	 4. Edit template
+	 5. Browse template
+	 6. SQL procedures
+	 7. 
+	 */
+	public class Catalog : ElementBase, ICatalog, ITable
 	{
 		public Boolean hidden { get; set; }
+		
+		[JsonProperty("base")]
+		public String baseCatalog {get;set;}
+
+		public String plural { get; set; }
+
 		public Dictionary<String, Field> fields { get; set; }
+		public List<String> features { get; set; }
 
 		public String GetModelJson()
 		{
 			var m = new ModelJson()
 			{
 				schema = _solution.schema,
-				model = _name,
+				model = name,
 				actions = new Dictionary<String, ModelAction>()
 				{
 					{"index", new ModelAction()
 						{
+							index = true,
 							template = "index.template",
 							view = "index.view"
 						}
@@ -29,12 +47,6 @@ namespace A2v10.App.Builder
 				},
 				dialogs = new Dictionary<string, ModelDialog>()
 				{
-					{ "browse", new ModelDialog()
-						{
-							index = true,
-							view = "browse.dialog"
-						}
-					},
 					{ "edit", new ModelDialog()
 						{
 							template = "edit.template",
@@ -50,6 +62,22 @@ namespace A2v10.App.Builder
 					}
 				}
 			};
+			if (features != null)
+			{
+				foreach (var f in features)
+				{
+					switch (f)
+					{
+						case "browse":
+							m.dialogs.Add("browse", new ModelDialog
+							{
+								index = true,
+								view = "browse.dialog"
+							});
+							break;
+					}
+				}
+			}
 
 			var json = JsonConvert.SerializeObject(m, new JsonSerializerSettings()
 			{
@@ -60,47 +88,46 @@ namespace A2v10.App.Builder
 			return json;
 		}
 
-		public String CreateIndexView()
+		public String CreateIndexView(XamlBuilder builder)
 		{
-			XNamespace aw = "clr-namespace:A2v10.Xaml;assembly=A2v10.Xaml";
+			XNamespace ns = XamlBuilder.XamlNamespace;
 			var doc = new XElement(
-				new XElement(aw + "Page",
-					new XElement(aw + "Page.CollectionView",
-						new XElement(aw + "CollectionView",
+				new XElement(ns + "Page",
+					new XElement(ns + "Page.CollectionView",
+						new XElement(ns + "CollectionView",
 							new XAttribute("RunAt", "ServerUrl"),
-							new XAttribute("ItemsSource", $"{{Bind Customers}}")
+							new XAttribute("ItemsSource", $"{{Bind {Plural}}}")
 						)
 					)
 				)
 			);
-			var tb = new XElement(aw + "Toolbar",
-				new XElement(aw + "Button",
+			var tb = new XElement(ns + "Toolbar",
+				new XElement(ns + "Button",
 					new XAttribute("Icon", "Reload"),
 					new XAttribute("Content", "Оновити"),
 					new XAttribute("Command", "{BindCmd Reload}")
 				)
 			);
-			doc.Add(new XElement(aw + "Page.Toolbar", tb));
+			doc.Add(new XElement(ns + "Page.Toolbar", tb));
 			doc.Add(
-				new XElement(aw + "Page.Pager",
-					new XElement(aw + "Pager",
-						new XAttribute("Source", "{Bind Parent.Pager}")
-					)
+				new XElement(ns + "Page.Pager",
+					builder.CreatePager("Parent.Pager")
 				)
 			);
-			var dg = new XElement(aw + "DataGrid", 
-				new XAttribute("ItemsSource", "{Bind Parent.ItemsSource}")
-			);
-			doc.Add(dg);
 
-			var col = new XElement(aw + "DataGridColumn",
-				new XAttribute("Header", "Наименование"),
-				new XAttribute("Content", "{Bind Name}")
-			);
-			dg.Add(col);
+			doc.Add(builder.CreateDataGrid("Parent.ItemsSource", GetTable()));
 
 			Console.WriteLine(doc);
 			return doc.ToString();
+		}
+
+
+		[JsonIgnore]
+		public String Plural => plural == null ? name.ToPlural() : plural;
+
+		public ITable GetTable()
+		{
+			return baseCatalog == null ? this : _solution.catalogs[baseCatalog];
 		}
 	}
 }

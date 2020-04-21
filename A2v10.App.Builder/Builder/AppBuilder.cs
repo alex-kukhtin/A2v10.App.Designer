@@ -2,32 +2,38 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Xml.Linq;
 
 namespace A2v10.App.Builder
 {
 	public class AppBuilder
 	{
 		private readonly Solution _solution;
+		private readonly Styles _styles;
 
-		public AppBuilder(Solution solution)
+		public AppBuilder(Solution solution, Styles styles)
 		{
 			_solution = solution;
+			_styles = styles;
 		}
 
 		public void Build()
 		{
-			BuildCatalogs();
+			var xamlBuilder = new XamlBuilder(_styles);
+			BuildCatalogs(xamlBuilder);
 			BuildDocuments();
 		}
 
-		void BuildCatalogs()
+		void BuildCatalogs(XamlBuilder builder)
 		{
+			var sqlBuilder = new SqlBuilder();
 			foreach (var c in _solution.catalogs)
 			{
 				if (c.Value.hidden)
 					continue;
 				BuildCatalogModelJson(c.Key, c.Value);
-				c.Value.CreateIndexView();
+				c.Value.CreateIndexView(builder);
+				Console.WriteLine(sqlBuilder.BuildPagedIndex(c.Value));
 				return;
 			}
 		}

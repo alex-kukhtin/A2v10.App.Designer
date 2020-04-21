@@ -11,16 +11,23 @@ namespace A2v10.App.Builder
 	public class ElementBase
 	{
 		public String uiName { get; set; }
+		public String typeName { get; set; }
+		public String schema { get; set; }
 
 		[JsonIgnore]
 		protected Solution _solution;
 		[JsonIgnore]
-		protected String _name;
+		public String name { get; private set; }
+
+		[JsonIgnore]
+		public String TypeName => typeName == null ? $"T{name}".ToSingular() : typeName;
+		[JsonIgnore]
+		public String Schema => schema == null ? _solution.schema : schema;
 
 		public void SetParent(Solution solution, String name)
 		{
 			_solution = solution;
-			_name = name;
+			this.name = name;
 		}
 
 		public String SerializeXml(XDocument doc)
@@ -34,9 +41,6 @@ namespace A2v10.App.Builder
 		}
 	}
 
-	public class Field : ElementBase
-	{
-	}
 
 	public class Document : ElementBase
 	{

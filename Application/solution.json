@@ -1,49 +1,95 @@
-{
+п»ї{
+	/*  field default: type:"string", len:255
+		plural -> if empty then add "-s", "-ies" suffix
+	*/
 	"schema": "sample",
+	"name": "sample_app",
+	"description": "a2v10 sample application",
 	"catalogs": {
 		"Agents": {
 			"hidden": true,
+			/*"typeName": "TAgent",*/
 			"fields": {
-				"Kind": {"type": "char", "length": 4, "parameter": true},
-				"Name": {"type": "string", "length": 50, "uiName": "Наименование"},
-				"Memo": {"type": "string", "length": 255, "uiName": "Примечание"}
+				"Kind": {
+					"type": "char",
+					"len": 4,
+					"parameter": true
+				},
+				"Name": {
+					"type": "string",
+					"len": 50,
+					"uiName": "РќР°РёРјРµРЅРѕРІР°РЅРёРµ"
+				},
+				"Code": {
+					"type": "string",
+					"len": 16,
+					"unique": true,
+					"uiName": "Р•Р”РџР РћРЈ"
+				},
+				"Memo": { "uiName": "РџСЂРёРјРµС‡Р°РЅРёРµ" }
 			}
 		},
 		"Customer": {
 			"base": "Agents",
-			"uiName": "Покупатели",
+			/*"plural": "Customers",*/
+			"uiName": "РџРѕРєСѓРїР°С‚РµР»Рё",
 			"parameters": {
 				"Kind": "CUST"
-			}
+			},
+			"features": [ "browse", "fetch" ]
 		},
-		"Units": {
-			"uiname": "Единицы измерения",
+		"Unit": {
+			"uiname": "Р•РґРёРЅРёС†С‹ РёР·РјРµСЂРµРЅРёСЏ",
 			"fields": {
 				"Short": {
-					"type": "string",
-					"length": 8,
-					"uiName": "Сокращение"
+					"len": 8,
+					"uiName": "РЎРѕРєСЂР°С‰РµРЅРёРµ"
 				},
 				"Name": {
 					"type": "string",
-					"length": 50,
-					"uiName": "Наименование"
-				}
+					"len": 50,
+					"uiName": "РќР°РёРјРµРЅРѕРІР°РЅРёРµ"
+				},
+				"Memo": { "uiName": "РџСЂРёРјРµС‡Р°РЅРёРµ" }
 			}
 		},
-		"Products": {
-			"uiName": "Товары",
+		"Product": {
+			"uiName": "РўРѕРІР°СЂС‹",
 			"fields": {
 
 			}
 		},
-		"Warehouses": {
+		"Warehouse": {
 
 		}
 	},
 	"documents": {
-		"Waybills": {
-			"uiName": "Приходная накладная"
+		"Documents": {
+			"hidden": true,
+			"fields": {
+				"Kind": {
+					"type": "char",
+					"len": 4,
+					"parameter": true
+				},
+				"Date": {
+					"type": "date",
+					"default": "Today"
+				},
+				"Customer": {
+					"ref": "Customer"
+				},
+				"Memo": {}
+			},
+			"details": {
+				"Rows": {
+
+				}
+			}
+		},
+		"Waybill": {
+			"uiName": "РџСЂРёС…РѕРґРЅР°СЏ РЅР°РєР»Р°РґРЅР°СЏ",
+			"base": "Documents"
 		}
 	},
 	"journals": {

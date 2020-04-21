@@ -14,6 +14,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Application", "Application", "{E4221B03-C607-4FB6-95A0-B239719CFC2F}"
 	ProjectSection(SolutionItems) = preProject
 		Application\solution.json = Application\solution.json
+		Application\styles.json = Application\styles.json
 	EndProjectSection
 EndProject
 Global

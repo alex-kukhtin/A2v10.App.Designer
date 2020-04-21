@@ -10,7 +10,8 @@ namespace A2v10.App.Test
 		static void Main(string[] args)
 		{
 			var s = Solution.LoadFromFile("../../../../Application/solution.json");
-			var b = new AppBuilder(s);
+			var styles = Styles.LoadFromFile("../../../../Application/styles.json");
+			var b = new AppBuilder(s, styles);
 			b.Build();
 		}
 	}

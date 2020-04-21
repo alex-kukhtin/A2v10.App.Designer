@@ -1,0 +1,14 @@
+﻿{
+	"DataGrid": {
+		"GridLines": "Horizontal",
+		"Hover": "True",
+		"Striped": "True",
+		"FixedHeader": "True",
+		"Style": "Light",
+		"Sort": "True"
+	},
+	"Pager": {
+		"Style":"Rounded"
+	}
+}
+
