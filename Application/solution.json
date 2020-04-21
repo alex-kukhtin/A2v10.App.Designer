@@ -1,0 +1,55 @@
+{
+	"schema": "sample",
+	"catalogs": {
+		"Agents": {
+			"hidden": true,
+			"fields": {
+				"Kind": {"type": "char", "length": 4, "parameter": true},
+				"Name": {"type": "string", "length": 50, "uiName": "Наименование"},
+				"Memo": {"type": "string", "length": 255, "uiName": "Примечание"}
+			}
+		},
+		"Customer": {
+			"base": "Agents",
+			"uiName": "Покупатели",
+			"parameters": {
+				"Kind": "CUST"
+			}
+		},
+		"Units": {
+			"uiname": "Единицы измерения",
+			"fields": {
+				"Short": {
+					"type": "string",
+					"length": 8,
+					"uiName": "Сокращение"
+				},
+				"Name": {
+					"type": "string",
+					"length": 50,
+					"uiName": "Наименование"
+				}
+			}
+		},
+		"Products": {
+			"uiName": "Товары",
+			"fields": {
+
+			}
+		},
+		"Warehouses": {
+
+		}
+	},
+	"documents": {
+		"Waybills": {
+			"uiName": "Приходная накладная"
+		}
+	},
+	"journals": {
+		"WJournal": {
+
+		}
+	}
+}
+

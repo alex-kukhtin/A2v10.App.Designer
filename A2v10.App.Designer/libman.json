@@ -1,0 +1,11 @@
+{
+	"version": "1.0",
+	"defaultProvider": "unpkg",
+	"libraries": [
+		{
+			"library": "vue@latest",
+			"destination": "wwwroot/lib/vue",
+			"files": ["types/vue.d.ts", "dist/vue.js", "dist/vue.min.js"]
+		}
+	]
+}
