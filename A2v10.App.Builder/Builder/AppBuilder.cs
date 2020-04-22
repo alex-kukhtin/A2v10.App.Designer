@@ -19,22 +19,27 @@ namespace A2v10.App.Builder
 
 		public void Build()
 		{
-			var xamlBuilder = new XamlBuilder(_styles);
-			BuildCatalogs(xamlBuilder);
+			BuildCatalogs();
 			BuildDocuments();
 		}
 
-		void BuildCatalogs(XamlBuilder builder)
+		void BuildCatalogs()
 		{
 			var sqlBuilder = new SqlBuilder();
+			var xamlBuilder = new XamlBuilder(_styles);
+			var templateBuilder = new CatalogTemplateBuilder();
 			foreach (var c in _solution.catalogs)
 			{
 				if (c.Value.hidden)
 					continue;
-				BuildCatalogModelJson(c.Key, c.Value);
-				c.Value.CreateIndexView(builder);
+				ICatalog catalog = c.Value;
+				BuildCatalogModelJson(c.Key, catalog);
+				Console.WriteLine("----INDEX XAML ---");
+				xamlBuilder.CreateIndexView(catalog);
+				Console.WriteLine("----TEMPLATE---");
+				Console.WriteLine(templateBuilder.BuildCatalog(catalog));
+				Console.WriteLine("----SQL ---");
 				Console.WriteLine(sqlBuilder.BuildPagedIndex(c.Value));
-				return;
 			}
 		}
 
@@ -46,10 +51,11 @@ namespace A2v10.App.Builder
 			}
 		}
 
-		void BuildCatalogModelJson(String name, Catalog elem)
+		void BuildCatalogModelJson(String name, ICatalog elem)
 		{
 			String path = $"catalogs/{name}";
-			var json = elem.GetModelJson();
+			var builder = new ModelJsonBuilder(elem);
+			var json = builder.Build();
 			Console.WriteLine(json);
 		}
 	}

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Linq;
 
 namespace A2v10.App.Builder
 {
@@ -17,7 +18,7 @@ sb.AppendLine(
 @$"-------------------------------------
 create or alter procedure [{model.Schema}].[{model.name}.Index]
 @UserId bigint,
-@Id bigint = null,
+@Id bigint = null,{GetProcParams(table)}
 @Offset int = 0,
 @PageSize int = 20,
 @Order nvarchar(255) = N'Id',
@@ -41,7 +42,7 @@ sb.AppendLine(
 	from 
 		[{table.Schema}].[{table.name}] {alias}
 	where 
-		@Fragment is null [TODO:OR params]
+		{GetWhereParams(alias, table)}(@Fragment is null [TODO:OR params])
 	order by [TODO: order by fields]
 	offset @Offset rows fetch next @PageSize rows only
 	option (recompile);
@@ -73,11 +74,41 @@ go
 		{
 			var sb = new StringBuilder();
 			sb.Append($"[Id!!Id] = {alias}.Id, ");
-			foreach (var f in table.fields)
+			if (table.fields != null)
 			{
-				if (f.Value.parameter)
-					continue;
-				sb.Append($"{alias}.[{f.Key}], ");
+				foreach (var f in table.fields)
+				{
+					if (f.Value.parameter)
+						continue;
+					sb.Append($"{alias}.[{f.Key}], ");
+				}
+			}
+			return sb.ToString();
+		}
+
+		String GetWhereParams(String alias, ITable table)
+		{
+			var prms = table.fields?.Where(x => x.Value.parameter);
+			if (prms == null)
+				return String.Empty;
+			var sb = new StringBuilder();
+			foreach (var f in prms)
+			{
+				sb.Append($"{alias}.{f.Key} = @{f.Key} and ");
+			}
+			return sb.ToString();
+		}
+
+		String GetProcParams(ITable table)
+		{
+			var prms = table.fields?.Where(x => x.Value.parameter);
+			if (prms == null)
+				return String.Empty;
+			var sb = new StringBuilder();
+			foreach (var f in prms)
+			{
+				sb.AppendLine();
+				sb.Append($"@{f.Key} {f.Value.SqlType()} = null,");
 			}
 			return sb.ToString();
 		}

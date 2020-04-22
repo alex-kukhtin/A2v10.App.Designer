@@ -17,7 +17,7 @@ namespace A2v10.App.Builder
 			_styles = styles;
 		}
 
-		public void SetElementStyle(XElement elem)
+		void SetElementStyle(XElement elem)
 		{
 			if (_styles == null)
 				return;
@@ -28,7 +28,7 @@ namespace A2v10.App.Builder
 			}
 		}
 
-		public XElement CreateDataGrid(String itemsSource, ITable table)
+		XElement CreateDataGrid(String itemsSource, ITable table)
 		{
 			var dg = new XElement(XamlNamespace + "DataGrid",
 				new XAttribute("ItemsSource", $"{{Bind {itemsSource}}}")
@@ -48,6 +48,8 @@ namespace A2v10.App.Builder
 				new XAttribute("Fit", "True")
 			);
 
+			if (table.fields == null)
+				yield break;
 			foreach (var f in table.fields)
 			{
 				if (f.Value.parameter)
@@ -64,7 +66,7 @@ namespace A2v10.App.Builder
 
 		}
 
-		public XElement CreatePager(String source)
+		XElement CreatePager(String source)
 		{
 			var pager = new XElement(XamlNamespace + "Pager",
 				new XAttribute("Source", $"{{Bind {source}}}")
@@ -72,5 +74,39 @@ namespace A2v10.App.Builder
 			SetElementStyle(pager);
 			return pager;
 		}
+
+		public String CreateIndexView(ICatalog catalog)
+		{
+			XNamespace ns = XamlBuilder.XamlNamespace;
+			var doc = new XElement(
+				new XElement(ns + "Page",
+					new XElement(ns + "Page.CollectionView",
+						new XElement(ns + "CollectionView",
+							new XAttribute("RunAt", "ServerUrl"),
+							new XAttribute("ItemsSource", $"{{Bind {catalog.Plural}}}")
+						)
+					)
+				)
+			);
+			var tb = new XElement(ns + "Toolbar",
+				new XElement(ns + "Button",
+					new XAttribute("Icon", "Reload"),
+					new XAttribute("Content", "Оновити"),
+					new XAttribute("Command", "{BindCmd Reload}")
+				)
+			);
+			doc.Add(new XElement(ns + "Page.Toolbar", tb));
+			doc.Add(
+				new XElement(ns + "Page.Pager",
+					CreatePager("Parent.Pager")
+				)
+			);
+
+			doc.Add(CreateDataGrid("Parent.ItemsSource", catalog.GetTable()));
+
+			Console.WriteLine(doc);
+			return doc.ToString();
+		}
+
 	}
 }

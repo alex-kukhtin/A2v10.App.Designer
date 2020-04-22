@@ -6,20 +6,21 @@ namespace A2v10.App.Builder
 {
 	public interface ITable
 	{
-		public String name { get; }
+		String name { get; }
 		Dictionary<String, Field> fields { get; }
 
-		public String TypeName { get; }
-		public String Schema { get; }
+		String TypeName { get; }
+		String Schema { get; }
 
 	}
 
 	public interface ICatalog
 	{
 		String Schema { get; }
-		public String name { get; }
+		String name { get; }
 
-		public String Plural { get; }
+		String Plural { get; }
+		List<String> features { get; set; }
 
 		ITable GetTable();
 	}
