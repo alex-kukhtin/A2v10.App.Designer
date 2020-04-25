@@ -1,8 +1,9 @@
-﻿using Newtonsoft.Json;
+﻿
 using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Xml.Linq;
+using System.Linq;
 
 namespace A2v10.App.Builder
 {
@@ -30,17 +31,45 @@ namespace A2v10.App.Builder
 			var templateBuilder = new CatalogTemplateBuilder();
 			foreach (var c in _solution.catalogs)
 			{
-				if (c.Value.hidden)
-					continue;
 				ICatalog catalog = c.Value;
 				BuildCatalogModelJson(c.Key, catalog);
-				Console.WriteLine("----INDEX XAML ---");
-				xamlBuilder.CreateIndexView(catalog);
-				Console.WriteLine("----TEMPLATE---");
-				Console.WriteLine(templateBuilder.BuildCatalog(catalog));
+				//Console.WriteLine("----INDEX XAML ---");
+				//xamlBuilder.CreateIndexView(catalog);
+				//Console.WriteLine("----TEMPLATE---");
+				//Console.WriteLine(templateBuilder.BuildCatalog(catalog));
 				Console.WriteLine("----SQL ---");
 				Console.WriteLine(sqlBuilder.BuildPagedIndex(c.Value));
+				break; // TODO: debug mode
 			}
+		}
+
+		public void BuildSql(String path)
+		{
+			var sqlBuilder = new SqlBuilder();
+			var sb = new StringBuilder();
+			// header
+			// TODO:
+
+			sb.AppendLine("-- SCHEMAS");
+			foreach (var c in _solution.AllSchemas())
+				sb.AppendLine(sqlBuilder.BuildSchema(c));
+
+			sb.AppendLine("-- TABLES");
+			foreach (var t in _solution.AllTables())
+				sb.AppendLine(sqlBuilder.BuildTable(t));
+			// TODO:
+
+			// table types
+			// TODO:
+
+			sb.AppendLine("-- PROCEDURES");
+			foreach (var c in _solution.catalogs)
+			{
+				sb.Append(sqlBuilder.BuildProcedures(c.Value));
+				break; // TODO: debug mode
+			}
+
+			File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
 		}
 
 		void BuildDocuments()

@@ -6,9 +6,9 @@
 	"name": "sample_app",
 	"description": "a2v10 sample application",
 	"catalogs": {
-		"Agents": {
-			"hidden": true,
-			/*"typeName": "TAgent",*/
+		"Agent": {
+			"plural": "Agents",
+			"uiName": "Контрагенти",
 			"fields": {
 				"Kind": {
 					"type": "char",
@@ -18,7 +18,8 @@
 				"Name": {
 					"type": "string",
 					"len": 50,
-					"uiName": "Наименование"
+					"uiName": "Назва",
+					"required": true
 				},
 				"Code": {
 					"type": "string",
@@ -26,12 +27,13 @@
 					"unique": true,
 					"uiName": "ЕДПРОУ"
 				},
-				"Memo": { "uiName": "Примечание" }
-			}
+				"Memo": { "uiName": "Примітка" },
+				"FullName": {"uiName": "Повна назва"}
+			},
+			"features": [ "index","browse", "fetech", "dialog" ]
 		},
 		"Customer": {
-			"base": "Agents",
-			/*"plural": "Customers",*/
+			"extends": "Agent",
 			"uiName": "Покупатели",
 			"parameters": {
 				"Kind": "CUST"
@@ -64,8 +66,8 @@
 		}
 	},
 	"documents": {
-		"Documents": {
-			"hidden": true,
+		"Document": {
+			"plural": "Documents",
 			"fields": {
 				"Kind": {
 					"type": "char",
@@ -77,6 +79,7 @@
 					"default": "Today"
 				},
 				"Customer": {
+					"type":  "ref",
 					"ref": "Customer"
 				},
 				"Memo": {}
@@ -89,7 +92,7 @@
 		},
 		"Waybill": {
 			"uiName": "Приходная накладная",
-			"base": "Documents"
+			"extends": "Documents"
 		}
 	},
 	"journals": {

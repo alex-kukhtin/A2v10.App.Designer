@@ -11,15 +11,12 @@ namespace A2v10.App.Builder
 
 		String TypeName { get; }
 		String Schema { get; }
+		String Plural { get; }
 
 	}
 
-	public interface ICatalog
+	public interface ICatalog : ITable
 	{
-		String Schema { get; }
-		String name { get; }
-
-		String Plural { get; }
 		List<String> features { get; set; }
 
 		ITable GetTable();

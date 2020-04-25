@@ -25,5 +25,14 @@ namespace A2v10.App.Builder
 				return source.Substring(source.Length - 1) + "ies";
 			return source + "s";
 		}
+
+		public static StringBuilder RemoveLastComma(this StringBuilder sb)
+		{
+			if (sb.Length == 0)
+				return sb;
+			if (sb[sb.Length - 1] == ',')
+				sb.Remove(sb.Length - 1, 1);
+			return sb;
+		}
 	}
 }

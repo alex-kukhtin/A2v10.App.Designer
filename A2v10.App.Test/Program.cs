@@ -13,6 +13,7 @@ namespace A2v10.App.Test
 			var styles = Styles.LoadFromFile("../../../../Application/styles.json");
 			var b = new AppBuilder(s, styles);
 			b.Build();
+			b.BuildSql("d:/temp/buildsample/sample.sql");
 		}
 	}
 }

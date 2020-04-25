@@ -17,24 +17,24 @@ namespace A2v10.App.Builder
 	 6. SQL procedures
 	 7. 
 	 */
-	public class Catalog : ElementBase, ICatalog, ITable
+	public class Table : ElementBase, ICatalog, ITable
 	{
-		public Boolean hidden { get; set; }
-		
-		[JsonProperty("base")]
-		public String baseCatalog {get;set;}
-
-		public String plural { get; set; }
+		public String extends {get;set;}
 
 		public Dictionary<String, Field> fields { get; set; }
 		public List<String> features { get; set; }
 
-		[JsonIgnore]
-		public String Plural => plural == null ? name.ToPlural() : plural;
-
 		public ITable GetTable()
 		{
-			return baseCatalog == null ? this : _solution.catalogs[baseCatalog];
+			return extends == null ? this : _solution.catalogs[extends];
+		}
+
+		public override void SetParent(Solution solution, string name)
+		{
+			base.SetParent(solution, name);
+			if (fields != null)
+				foreach (var f in fields)
+					f.Value.SetParent(solution, f.Key);
 		}
 	}
 }
