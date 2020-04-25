@@ -29,8 +29,7 @@
 				},
 				"Memo": { "uiName": "Примітка" },
 				"FullName": {"uiName": "Повна назва"}
-			},
-			"features": [ "index","browse", "fetech", "dialog" ]
+			}
 		},
 		"Customer": {
 			"extends": "Agent",

@@ -3,18 +3,31 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30011.22
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "A2v10.App.Designer", "A2v10.App.Designer\A2v10.App.Designer.csproj", "{2FD9BD5F-3356-48B0-93B4-F7D695EE80BC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "A2v10.App.Designer", "A2v10.App.Designer\A2v10.App.Designer.csproj", "{2FD9BD5F-3356-48B0-93B4-F7D695EE80BC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "A2v10.App.Builder", "A2v10.App.Builder\A2v10.App.Builder.csproj", "{C7F046F1-6DC6-4AF1-99CA-01C22D70A577}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "A2v10.App.Builder", "A2v10.App.Builder\A2v10.App.Builder.csproj", "{C7F046F1-6DC6-4AF1-99CA-01C22D70A577}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "A2v10.App.Test", "A2v10.App.Test\A2v10.App.Test.csproj", "{F664BD4A-707C-4DF9-903B-48254C43CFE2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "A2v10.App.Test", "A2v10.App.Test\A2v10.App.Test.csproj", "{F664BD4A-707C-4DF9-903B-48254C43CFE2}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{DDA93D08-2F30-4509-B758-A9EBE34C7948}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Application", "Application", "{E4221B03-C607-4FB6-95A0-B239719CFC2F}"
 	ProjectSection(SolutionItems) = preProject
+		Application\sample_full.sql = Application\sample_full.sql
 		Application\solution.json = Application\solution.json
 		Application\styles.json = Application\styles.json
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "catalog", "catalog", "{60E8D434-9E0A-453F-8247-FDF39D034EBF}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "agent", "agent", "{3F1B1BD0-8AD0-4992-883D-2926376B37F3}"
+	ProjectSection(SolutionItems) = preProject
+		Application\catalog\agent\model.json = Application\catalog\agent\model.json
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "customer", "customer", "{63CC1F52-CA60-4ACC-A500-94FD8057BF3C}"
+	ProjectSection(SolutionItems) = preProject
+		Application\catalog\customer\model.json = Application\catalog\customer\model.json
 	EndProjectSection
 EndProject
 Global
@@ -41,6 +54,9 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{E4221B03-C607-4FB6-95A0-B239719CFC2F} = {DDA93D08-2F30-4509-B758-A9EBE34C7948}
+		{60E8D434-9E0A-453F-8247-FDF39D034EBF} = {E4221B03-C607-4FB6-95A0-B239719CFC2F}
+		{3F1B1BD0-8AD0-4992-883D-2926376B37F3} = {60E8D434-9E0A-453F-8247-FDF39D034EBF}
+		{63CC1F52-CA60-4ACC-A500-94FD8057BF3C} = {60E8D434-9E0A-453F-8247-FDF39D034EBF}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0DDEC002-B496-4CB6-AA0E-6AB522F60B85}

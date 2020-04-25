@@ -9,11 +9,13 @@ namespace A2v10.App.Test
 	{
 		static void Main(string[] args)
 		{
-			var s = Solution.LoadFromFile("../../../../Application/solution.json");
-			var styles = Styles.LoadFromFile("../../../../Application/styles.json");
-			var b = new AppBuilder(s, styles);
+			var basePath = "../../../../Application";
+			var s = Solution.LoadFromFile($"{basePath}/solution.json");
+			var styles = Styles.LoadFromFile($"{basePath}/styles.json");
+			var b = new AppBuilder(s, styles, basePath);
 			b.Build();
-			b.BuildSql("d:/temp/buildsample/sample.sql");
+			//Directory.CreateDirectory("../../../../Application/sample");
+			b.BuildSql($"{basePath}/sample_full.sql");
 		}
 	}
 }

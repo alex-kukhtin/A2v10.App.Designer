@@ -1,5 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿
+using System;
 using System.Text;
 using System.Linq;
 
@@ -8,6 +8,7 @@ namespace A2v10.App.Builder
 	public class SqlBuilder
 	{
 		const String divider = "-------------------------------------";
+		const Int32 PAGE_SIZE = 20;
 
 		public String BuildProcedures(ICatalog model)
 		{
@@ -31,7 +32,7 @@ create or alter procedure [{model.Schema}].[{model.name}.Index]
 @UserId bigint,
 @Id bigint = null,{GetProcParams(table)}
 @Offset int = 0,
-@PageSize int = 20,
+@PageSize int = {PAGE_SIZE},
 @Order nvarchar(255) = N'Id',
 @Dir nvarchar(20) = N'desc',
 @Fragment nvarchar(255) = null

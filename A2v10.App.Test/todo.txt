@@ -1,5 +1,4 @@
 ﻿
 
-1. typeName: from json
 2. model.json: add parameters
-3.
+3. Element.Load add parameters to where. (and a.Kind = @Kind)
