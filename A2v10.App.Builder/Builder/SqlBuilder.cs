@@ -7,10 +7,14 @@ namespace A2v10.App.Builder
 {
 	public class SqlBuilder
 	{
-		const String divider = "-------------------------------------";
+		public const String divider = "-------------------------------------";
 		const Int32 PAGE_SIZE = 20;
 
-		public String BuildProcedures(ICatalog model)
+		public SqlBuilder()
+		{
+		}
+
+		public String BuildProcedures(ITable model)
 		{
 			var sb = new StringBuilder();
 			sb.Append(BuildLoad(model));
@@ -18,10 +22,10 @@ namespace A2v10.App.Builder
 			return sb.ToString();
 		}
 
-		public String BuildPagedIndex(ICatalog model)
+		public String BuildPagedIndex(ITable model)
 		{
 			var propName = model.Plural;
-			ITable table = model.GetTable();
+			ITable table = model.GetBaseTable();
 			var alias = table.name[0].ToString().ToLowerInvariant();
 			var tableName = table.Plural;
 
@@ -99,20 +103,6 @@ go
 				}
 			}
 			return sb.RemoveLastComma().ToString();
-		}
-
-		String GetTableFields(ITable table)
-		{
-			var sb = new StringBuilder();
-			if (table.fields != null)
-			{
-				foreach (var f in table.fields)
-				{
-					sb.AppendLine();
-					sb.Append($"	[{f.Key}] {f.Value.SqlField(table.Plural)},");
-				}
-			}
-			return sb.ToString();
 		}
 
 		String GetWhereParams(String alias, ITable table)
@@ -194,13 +184,13 @@ go
 			AppendBlock(sb, "asc", sbNum);
 			AppendBlock(sb, "desc", sbNum);
 
-			sb.AppendLine($"	{alias}.Id desc");
+			sb.Append($"\t{alias}.Id desc");
 			return sb.ToString();
 		}
 
-		public String BuildLoad(ICatalog model)
+		public String BuildLoad(ITable model)
 		{
-			ITable table = model.GetTable();
+			ITable table = model.GetBaseTable();
 			var alias = table.name[0].ToString().ToLowerInvariant();
 			var tableName = table.Plural;
 			var sb = new StringBuilder();
@@ -237,24 +227,8 @@ go
 
 		public String BuildTable(ITable table)
 		{
-			var tableName = table.Plural;
-			return
-$@"{divider}
-if not exists(select * from INFORMATION_SCHEMA.SEQUENCES where SEQUENCE_SCHEMA=N'{table.Schema}' and SEQUENCE_NAME=N'SQ_{tableName}')
-	create sequence [{table.Schema}].SQ_{tableName} as bigint start with 100 increment by 1;
-go
-{divider}
-if not exists(select * from INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA=N'{table.Schema}' and TABLE_NAME=N'{tableName}')
-begin
-create table [{table.Schema}].[{tableName}]
-(
-	Id bigint not null constraint DF_{tableName}_Id default(next value for [{table.Schema}].SQ_{tableName})
-		constraint PK_{tableName} primary key,{GetTableFields(table)}
-	DateCreated datetime not null constraint DF_{tableName}_DateCreated default(a2sys.fn_getCurrentDate()),
-	DateModified datetime not null constraint DF_{tableName}_DateModified default(a2sys.fn_getCurrentDate()),
-)
-end
-go";
+			var tb = new SqlTableBuilder(table, null);
+			return tb.BuildTable();
 		}
 	}
 }

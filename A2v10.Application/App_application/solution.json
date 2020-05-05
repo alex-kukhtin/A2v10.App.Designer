@@ -1,0 +1,134 @@
+﻿{
+	/*  field default: type:"string", len:255
+		plural -> if empty then add "-s", "-ies" suffix
+	*/
+	"schema": "sample",
+	"name": "sample_app",
+	"description": "a2v10 sample application",
+	"catalogs": {
+		"Agent": {
+			"plural": "Agents",
+			"uiName": "Контрагенти",
+			"fields": {
+				"Kind": {
+					"type": "char",
+					"len": 4,
+					"parameter": true
+				},
+				"Name": {
+					"type": "string",
+					"len": 50,
+					"uiName": "Назва",
+					"required": true
+				},
+				"Code": {
+					"type": "string",
+					"len": 16,
+					"unique": true,
+					"uiName": "ЕДПРОУ"
+				},
+				"FullName": { "uiName": "Повна назва" },
+				"Memo": { "uiName": "Примітка" }
+			},
+			"features": [ "index", "editDialog", "browse", "fetch" ]
+		},
+		"Customer": {
+			"extends": "Agent",
+			"uiName": "Покупатели",
+			"parameters": {
+				"Kind": "CUST"
+			},
+			"features": [ "index", "editDialog", "browse", "fetch" ]
+		},
+		"Unit": {
+			"uiname": "Единицы измерения",
+			"fields": {
+				"Short": {
+					"len": 8,
+					"uiName": "Сокращение"
+				},
+				"Name": {
+					"type": "string",
+					"len": 50,
+					"uiName": "Наименование"
+				},
+				"Memo": { "uiName": "Примечание" }
+			}
+		},
+		"Product": {
+			"uiName": "Товары",
+			"fields": {
+				"Name": {},
+				"Article": {"len": 20, "uiName": "Артикул"},
+				"FullName": {},
+				"Memo": {}
+			},
+			"features": ["index","editDialog", "browse", "fetch"]
+		},
+		"Warehouse": {
+
+		}
+	},
+	"documents": {
+		"Document": {
+			"plural": "Documents",
+			"fields": {
+				"Kind": {
+					"type": "char",
+					"len": 4,
+					"parameter": true
+				},
+				"Date": {
+					"type": "date",
+					"default": "Today"
+				},
+				"Customer": {
+					"type": "ref",
+					"ref": "Customer"
+				},
+				"Sum": {
+					"type": "money",
+					"calc": "this.Rows.$sum(r => r.Sum)"
+				},
+				"Memo": {}
+			},
+			"details": {
+				"Row": {
+					"plural": "Rows",
+					"fields": {
+						"Product": {
+							"type": "ref",
+							"ref": "Product"
+						},
+						"Qty": {
+							"type": "float",
+							"default": "1"
+						},
+						"Price": {
+							"type": "money"
+						},
+						"Sum": {
+							"type": "money",
+							"calc": "this.Price * this.Qty"
+						},
+						"Memo": {}
+					}
+				}
+			}
+		},
+		"Waybill": {
+			"uiName": "Приходная накладная",
+			"extends": "Document",
+			"parameters": {
+				"Kind": "WBIN"
+			},
+			"features": [ "index", "editPage" ]
+		}
+	},
+	"journals": {
+		"WJournal": {
+
+		}
+	}
+}
+

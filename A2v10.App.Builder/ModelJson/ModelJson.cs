@@ -34,6 +34,7 @@ namespace A2v10.App.Builder
 		[JsonConverter(typeof(StringEnumConverter))]
 		public CommandType type { get; set; }
 		public String procedure { get; set; }
+		public Dictionary<String, String> parameters { get; set; }
 	}
 
 	public class ModelJson

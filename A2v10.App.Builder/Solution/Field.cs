@@ -11,7 +11,8 @@ namespace A2v10.App.Builder
 		@char,
 		date,
 		dateTime,
-		currency,
+		money,
+		@float,
 		@ref
 	}
 
@@ -41,6 +42,10 @@ namespace A2v10.App.Builder
 					return $"datetime";
 				case FieldType.@ref:
 					return "bigint";
+				case FieldType.money:
+					return $"money";
+				case FieldType.@float:
+					return $"float";
 			}
 			throw new NotImplementedException(type.ToString());
 		}
@@ -78,7 +83,7 @@ namespace A2v10.App.Builder
 
 		public Boolean IsOrderByAsNumber()
 		{
-			return type == FieldType.currency;
+			return type == FieldType.money || type == FieldType.@float;
 		}
 
 		public Boolean IsOrderByAsDate()

@@ -1,0 +1,39 @@
+{
+  "schema": "sample",
+  "model": "Agent",
+  "actions": {
+    "index": {
+      "template": "../agent/index.template",
+      "view": "../agent/index.view",
+      "index": true,
+      "parameters": {
+        "Kind": "CUST"
+      }
+    }
+  },
+  "dialogs": {
+    "edit": {
+      "template": "../agent/edit.template",
+      "view": "../agent/edit.dialog",
+      "parameters": {
+        "Kind": "CUST"
+      }
+    },
+    "browse": {
+      "view": "../agent/browse.dialog",
+      "index": true,
+      "parameters": {
+        "Kind": "CUST"
+      }
+    }
+  },
+  "commands": {
+    "fetch": {
+      "type": "sql",
+      "procedure": "Agent.Fetch",
+      "parameters": {
+        "Kind": "CUST"
+      }
+    }
+  }
+}

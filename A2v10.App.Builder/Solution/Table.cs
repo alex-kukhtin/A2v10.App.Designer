@@ -1,8 +1,6 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Xml;
-using System.Xml.Linq;
 using Newtonsoft.Json;
 
 namespace A2v10.App.Builder
@@ -17,16 +15,27 @@ namespace A2v10.App.Builder
 	 6. SQL procedures
 	 7. 
 	 */
-	public class Table : ElementBase, ICatalog, ITable
+	public class Table : ElementBase, ITable
 	{
 		public String extends {get;set;}
 
 		public Dictionary<String, Field> fields { get; set; }
 		public List<String> features { get; set; }
+		public Dictionary<String, Table> details { get; set; }
+		public Dictionary<String, String> parameters { get; set; }
 
-		public ITable GetTable()
+
+		private ITable _parentTable = null;
+
+		public ITable GetParentTable()
 		{
-			return extends == null ? this : _solution.catalogs[extends];
+			return _parentTable;
+		}
+
+
+		public ITable GetBaseTable()
+		{
+			return extends == null ? this : _solution.FindTable(extends);
 		}
 
 		public override void SetParent(Solution solution, string name)
@@ -35,6 +44,12 @@ namespace A2v10.App.Builder
 			if (fields != null)
 				foreach (var f in fields)
 					f.Value.SetParent(solution, f.Key);
+			if (details != null)
+				foreach (var d in details)
+				{
+					d.Value.SetParent(solution, d.Key);
+					d.Value._parentTable = this;
+				}
 		}
 	}
 }

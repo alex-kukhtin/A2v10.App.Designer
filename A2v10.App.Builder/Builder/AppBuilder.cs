@@ -28,23 +28,23 @@ namespace A2v10.App.Builder
 
 		void BuildCatalogs()
 		{
-			var sqlBuilder = new SqlBuilder();
 			var xamlBuilder = new XamlBuilder(_styles);
 			var templateBuilder = new CatalogTemplateBuilder();
 			foreach (var c in _solution.catalogs)
 			{
-				ICatalog catalog = c.Value;
+				ITable catalog = c.Value;
 				String dir = $"{_basePath}/catalog/{c.Key.ToLowerInvariant()}";
 				Directory.CreateDirectory(dir);
 
 				String modelJsonfile = $"{dir}/model.json";
 				File.WriteAllText(modelJsonfile, BuildCatalogModelJson(catalog));
 
-
-				//Console.WriteLine("----INDEX XAML ---");
-				//xamlBuilder.CreateIndexView(catalog);
+				xamlBuilder.BuildCatalogFiles(dir, catalog);
+				templateBuilder.BuildCatalogFiles(_basePath, catalog);
+				//String indexViewFile = $"{dir}/index.view.xaml";
+				//File.WriteAllText(indexViewFile, xamlBuilder.CreateIndexView(catalog));
 				//Console.WriteLine("----TEMPLATE---");
-				//Console.WriteLine(templateBuilder.BuildCatalog(catalog));
+				//Console.WriteLine();
 				//Console.WriteLine("----SQL ---");
 				//Console.WriteLine(sqlBuilder.BuildPagedIndex(c.Value));
 			}
@@ -82,11 +82,15 @@ namespace A2v10.App.Builder
 		{
 			foreach (var d in _solution.documents)
 			{
-				//BuildModelJson($"documents/{d.Key}", d.Value);
+				ITable table = d.Value;
+				String dir = $"{_basePath}/document/{table.name.ToLowerInvariant()}";
+				Directory.CreateDirectory(dir);
+				String modelJsonfile = $"{dir}/model.json";
+				File.WriteAllText(modelJsonfile, BuildCatalogModelJson(table));
 			}
 		}
 
-		String BuildCatalogModelJson(ICatalog elem)
+		String BuildCatalogModelJson(ITable elem)
 		{
 			var builder = new ModelJsonBuilder(elem);
 			return builder.Build();

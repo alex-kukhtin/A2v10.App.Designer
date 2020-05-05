@@ -7,25 +7,37 @@ namespace A2v10.App.Builder
 {
 	public class ModelJsonBuilder
 	{
-		private readonly ICatalog _catalog;
-		public ModelJsonBuilder(ICatalog catalog)
+		private readonly ITable _table;
+		public ModelJsonBuilder(ITable table)
 		{
-			_catalog = catalog;
+			_table = table;
 		}
 
 		public String Build()
 		{
+			String parentLink = String.Empty;
+			Dictionary<String, String> prms = null;
+
+			var baseTable = _table.GetBaseTable();
+
+			if (!String.IsNullOrEmpty(_table.extends))
+			{
+				parentLink = $"../{_table.extends.ToLowerInvariant()}/";
+				prms = _table.parameters;
+			}
+
 			var m = new ModelJson()
 			{
-				schema = _catalog.Schema,
-				model = _catalog.name,
+				schema = baseTable.Schema,
+				model = baseTable.name,
 				actions = new Dictionary<String, ModelAction>()
 				{
 					{"index", new ModelAction()
 						{
 							index = true,
-							template = "index.template",
-							view = "index.view"
+							template = $"{parentLink}index.template",
+							view = $"{parentLink}index.view",
+							parameters = prms
 						}
 					}
 				},
@@ -33,16 +45,17 @@ namespace A2v10.App.Builder
 				{
 					{ "edit", new ModelDialog()
 						{
-							template = "edit.template",
-							view = "edit.dialog"
+							template = $"{parentLink}edit.template",
+							view = $"{parentLink}edit.dialog",
+							parameters = prms
 						}
 					}
 				}
 			};
-			// Add parameters
-			if (_catalog.features != null)
+			// features
+			if (_table.features != null)
 			{
-				foreach (var f in _catalog.features)
+				foreach (var f in _table.features)
 				{
 					switch (f)
 					{
@@ -50,7 +63,8 @@ namespace A2v10.App.Builder
 							m.dialogs.Add("browse", new ModelDialog
 							{
 								index = true,
-								view = "browse.dialog"
+								view = $"{parentLink}browse.dialog",
+								parameters = prms
 							});
 							break;
 						case "fetch":
@@ -59,7 +73,8 @@ namespace A2v10.App.Builder
 							m.commands.Add("fetch", new ModelCommand()
 							{
 								type = CommandType.sql,
-								procedure = $"{_catalog.name}.Fetch"
+								procedure = $"{baseTable.name}.Fetch",
+								parameters = prms
 							});
 							break;
 					}

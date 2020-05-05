@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+﻿
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
+
+using Newtonsoft.Json;
 
 namespace A2v10.App.Builder
 {
@@ -78,6 +80,9 @@ namespace A2v10.App.Builder
 				yield return c.Value;
 			foreach (var d in documents.Where(x => String.IsNullOrEmpty(x.Value.extends))) {
 				yield return d.Value;
+				if (d.Value.details != null)
+					foreach (var dd in d.Value.details.Where(x => String.IsNullOrEmpty(x.Value.extends)))
+						yield return dd.Value;
 			}
 			foreach (var d in journals.Where(x => String.IsNullOrEmpty(x.Value.extends)))
 			{
@@ -88,9 +93,9 @@ namespace A2v10.App.Builder
 		public ITable FindTable(String name)
 		{
 			if (catalogs.TryGetValue(name, out Table cat))
-				return cat.GetTable();
+				return cat.GetBaseTable();
 			if (documents.TryGetValue(name, out Table doc))
-				return doc.GetTable();
+				return doc.GetBaseTable();
 			return null;
 		}
 

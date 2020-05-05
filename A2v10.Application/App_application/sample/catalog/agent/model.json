@@ -1,0 +1,27 @@
+{
+  "schema": "sample",
+  "model": "Agent",
+  "actions": {
+    "index": {
+      "template": "index.template",
+      "view": "index.view",
+      "index": true
+    }
+  },
+  "dialogs": {
+    "edit": {
+      "template": "edit.template",
+      "view": "edit.dialog"
+    },
+    "browse": {
+      "view": "browse.dialog",
+      "index": true
+    }
+  },
+  "commands": {
+    "fetch": {
+      "type": "sql",
+      "procedure": "Agent.Fetch"
+    }
+  }
+}

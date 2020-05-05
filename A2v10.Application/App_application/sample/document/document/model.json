@@ -1,0 +1,17 @@
+{
+  "schema": "sample",
+  "model": "Document",
+  "actions": {
+    "index": {
+      "template": "index.template",
+      "view": "index.view",
+      "index": true
+    }
+  },
+  "dialogs": {
+    "edit": {
+      "template": "edit.template",
+      "view": "edit.dialog"
+    }
+  }
+}

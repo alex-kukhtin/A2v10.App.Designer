@@ -9,26 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "A2v10.App.Builder", "A2v10.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "A2v10.App.Test", "A2v10.App.Test\A2v10.App.Test.csproj", "{F664BD4A-707C-4DF9-903B-48254C43CFE2}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{DDA93D08-2F30-4509-B758-A9EBE34C7948}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Application", "Application", "{E4221B03-C607-4FB6-95A0-B239719CFC2F}"
-	ProjectSection(SolutionItems) = preProject
-		Application\sample_full.sql = Application\sample_full.sql
-		Application\solution.json = Application\solution.json
-		Application\styles.json = Application\styles.json
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "catalog", "catalog", "{60E8D434-9E0A-453F-8247-FDF39D034EBF}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "agent", "agent", "{3F1B1BD0-8AD0-4992-883D-2926376B37F3}"
-	ProjectSection(SolutionItems) = preProject
-		Application\catalog\agent\model.json = Application\catalog\agent\model.json
-	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "customer", "customer", "{63CC1F52-CA60-4ACC-A500-94FD8057BF3C}"
-	ProjectSection(SolutionItems) = preProject
-		Application\catalog\customer\model.json = Application\catalog\customer\model.json
-	EndProjectSection
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "A2v10.Application", "A2v10.Application\A2v10.Application.csproj", "{76473128-5D29-457D-913A-9ECCBF766C93}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -48,15 +29,13 @@ Global
 		{F664BD4A-707C-4DF9-903B-48254C43CFE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F664BD4A-707C-4DF9-903B-48254C43CFE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F664BD4A-707C-4DF9-903B-48254C43CFE2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{76473128-5D29-457D-913A-9ECCBF766C93}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{76473128-5D29-457D-913A-9ECCBF766C93}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{76473128-5D29-457D-913A-9ECCBF766C93}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{76473128-5D29-457D-913A-9ECCBF766C93}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{E4221B03-C607-4FB6-95A0-B239719CFC2F} = {DDA93D08-2F30-4509-B758-A9EBE34C7948}
-		{60E8D434-9E0A-453F-8247-FDF39D034EBF} = {E4221B03-C607-4FB6-95A0-B239719CFC2F}
-		{3F1B1BD0-8AD0-4992-883D-2926376B37F3} = {60E8D434-9E0A-453F-8247-FDF39D034EBF}
-		{63CC1F52-CA60-4ACC-A500-94FD8057BF3C} = {60E8D434-9E0A-453F-8247-FDF39D034EBF}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0DDEC002-B496-4CB6-AA0E-6AB522F60B85}

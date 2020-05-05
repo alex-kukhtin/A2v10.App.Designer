@@ -9,10 +9,10 @@ namespace A2v10.App.Test
 	{
 		static void Main(string[] args)
 		{
-			var basePath = "../../../../Application";
+			var basePath = "../../../../A2v10.Application/App_Application";
 			var s = Solution.LoadFromFile($"{basePath}/solution.json");
 			var styles = Styles.LoadFromFile($"{basePath}/styles.json");
-			var b = new AppBuilder(s, styles, basePath);
+			var b = new AppBuilder(s, styles, basePath + "/sample");
 			b.Build();
 			//Directory.CreateDirectory("../../../../Application/sample");
 			b.BuildSql($"{basePath}/sample_full.sql");

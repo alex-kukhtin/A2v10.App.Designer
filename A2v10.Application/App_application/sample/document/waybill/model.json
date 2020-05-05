@@ -1,0 +1,23 @@
+{
+  "schema": "sample",
+  "model": "Document",
+  "actions": {
+    "index": {
+      "template": "../document/index.template",
+      "view": "../document/index.view",
+      "index": true,
+      "parameters": {
+        "Kind": "WBIN"
+      }
+    }
+  },
+  "dialogs": {
+    "edit": {
+      "template": "../document/edit.template",
+      "view": "../document/edit.dialog",
+      "parameters": {
+        "Kind": "WBIN"
+      }
+    }
+  }
+}
