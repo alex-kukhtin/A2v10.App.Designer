@@ -44,34 +44,17 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="A2v10.Web.Mvc, Version=10.0.7650.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\A2v10.Web.Runtime.10.0.7650\lib\net461\A2v10.Web.Mvc.dll</HintPath>
+    <Reference Include="A2v10.Web.Mvc, Version=10.0.7654.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\A2v10.Web.Runtime.10.0.7654\lib\net461\A2v10.Web.Mvc.dll</HintPath>
     </Reference>
-    <Reference Include="A2v10.Workflow, Version=10.0.7650.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\A2v10.Web.Runtime.10.0.7650\lib\net461\A2v10.Workflow.dll</HintPath>
+    <Reference Include="A2v10.Workflow, Version=10.0.7654.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\A2v10.Web.Runtime.10.0.7654\lib\net461\A2v10.Workflow.dll</HintPath>
     </Reference>
-    <Reference Include="A2v10.Xaml, Version=10.0.7650.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\A2v10.Web.Runtime.10.0.7650\lib\net461\A2v10.Xaml.dll</HintPath>
+    <Reference Include="A2v10.Xaml, Version=10.0.7654.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\A2v10.Web.Runtime.10.0.7654\lib\net461\A2v10.Xaml.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Activities" />
-    <Reference Include="System.Web.DynamicData" />
-    <Reference Include="System.Web.Entity" />
-    <Reference Include="System.Web.ApplicationServices" />
-    <Reference Include="System.ComponentModel.DataAnnotations" />
-    <Reference Include="System" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Xaml" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Drawing" />
-    <Reference Include="System.Web" />
-    <Reference Include="System.Xml" />
-    <Reference Include="System.Configuration" />
-    <Reference Include="System.Web.Services" />
-    <Reference Include="System.EnterpriseServices" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="App_application\%40sql\platform\a2v10admin.sql" />
@@ -111,6 +94,13 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="App_application\solution.json" />
+    <Content Include="App_application\styles.json" />
+    <Content Include="App_application\sample\catalog\agent\model.json" />
+    <Content Include="App_application\sample\catalog\customer\model.json" />
+    <Content Include="App_application\sample\catalog\product\model.json" />
+    <Content Include="App_application\sample\catalog\unit\model.json" />
+    <Content Include="App_application\sample\catalog\warehouse\model.json" />
     <Content Include="Web.config.sample" />
     <Content Include="tsconfig.json" />
     <Content Include="css\fonts\A2v10.woff2" />
@@ -119,13 +109,6 @@
     <Content Include="css\fonts\A2v10.eot" />
     <Content Include="App_application\%40schemas\sql-json-schema.json" />
     <Content Include="App_application\%40schemas\model-json-schema.json" />
-    <Content Include="App_application\solution.json" />
-    <Content Include="App_application\styles.json" />
-    <Content Include="App_application\sample\catalog\agent\model.json" />
-    <Content Include="App_application\sample\catalog\customer\model.json" />
-    <Content Include="App_application\sample\catalog\product\model.json" />
-    <Content Include="App_application\sample\catalog\unit\model.json" />
-    <Content Include="App_application\sample\catalog\warehouse\model.json" />
     <None Include="packages.config" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
@@ -153,6 +136,12 @@
       <SubType>Designer</SubType>
     </Content>
     <Content Include="App_application\sample\catalog\product\index.view.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="App_application\sample\catalog\agent\edit.dialog.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Content>
