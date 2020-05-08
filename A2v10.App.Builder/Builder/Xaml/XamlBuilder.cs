@@ -6,9 +6,9 @@ using System.IO;
 using System.Text;
 using System.Xml.Linq;
 
-namespace A2v10.App.Builder
+namespace A2v10.App.Builder.Xaml
 {
-	public class XamlBuilder
+	public class XamlBuilder : IViewBuilder
 	{
 		public static XNamespace XamlNamespace { get; } = "clr-namespace:A2v10.Xaml;assembly=A2v10.Xaml";
 
@@ -18,6 +18,8 @@ namespace A2v10.App.Builder
 		{
 			_styles = styles;
 		}
+
+		public String Extension => "xaml";
 
 		void SetElementStyle(XElement elem)
 		{
@@ -77,17 +79,18 @@ namespace A2v10.App.Builder
 			return pager;
 		}
 
-		public String CreateIndexView(ITable table)
+		public String IndexView(ITable table)
 		{
-			if (!table.features.Contains("index"))
+			if (!table.HasFeature("index"))
 				return null;
+			var baseTable = table.GetBaseTable();
 			XNamespace ns = XamlBuilder.XamlNamespace;
 			var doc = new XElement(
 				new XElement(ns + "Page",
 					new XElement(ns + "Page.CollectionView",
 						new XElement(ns + "CollectionView",
 							new XAttribute("RunAt", "ServerUrl"),
-							new XAttribute("ItemsSource", $"{{Bind {table.Plural}}}")
+							new XAttribute("ItemsSource", $"{{Bind {baseTable.Plural}}}")
 						)
 					)
 				)
@@ -107,7 +110,7 @@ namespace A2v10.App.Builder
 				)
 			);
 
-			doc.Add(CreateDataGrid("Parent.ItemsSource", table.GetBaseTable()));
+			doc.Add(CreateDataGrid("Parent.ItemsSource", baseTable));
 
 			return doc.ToString();
 		}
@@ -115,62 +118,30 @@ namespace A2v10.App.Builder
 		IEnumerable<XElement> CreateToolbarButtons(ITable table)
 		{
 			XNamespace ns = XamlBuilder.XamlNamespace;
-			if (table.features.Contains("editDialog"))
+			var tn = table.name.ToLowerInvariant();
+			if (table.HasFeature("editDialog"))
 			{
 				yield return new XElement(ns + "Button",
 					new XAttribute("Icon", "Add"),
 					new XAttribute("Content", "Додати"),
-					new XAttribute("Command", $"{{BindCmd Dialog, Action=Append, Argument={{Bind Parent.ItemsSource}}, Url='/catalog/{table.name}/edit'}}")
+					new XAttribute("Command", $"{{BindCmd Dialog, Action=Append, Argument={{Bind Parent.ItemsSource}}, Url='/catalog/{tn}/edit'}}")
 				);
 				yield return new XElement(ns + "Button",
 					new XAttribute("Icon", "Edit"),
 					new XAttribute("Content", "Змінити"),
-					new XAttribute("Command", $"{{BindCmd Dialog, Action=EditSelected, Argument={{Bind Parent.ItemsSource}}, Url='/catalog/{table.name}/edit'}}")
+					new XAttribute("Command", $"{{BindCmd Dialog, Action=EditSelected, Argument={{Bind Parent.ItemsSource}}, Url='/catalog/{tn}/edit'}}")
 				);
 				yield return new XElement(ns + "Separator");
 			}
 		}
 
 
-		String CreateEditDialog(ITable table)
+		public String EditDialog(ITable table)
 		{
-			if (!table.features.Contains("editDialog"))
+			if (!table.HasFeature("editDialog"))
 				return null;
-			XNamespace ns = XamlBuilder.XamlNamespace;
-			var doc = new XElement(
-				new XElement(ns + "Dialog",
-					new XElement(ns + "Dialog.Buttons",
-						new XElement(ns + "Button",
-							new XAttribute("Content", "Зберегти"),
-							new XAttribute("Command", "{BindCmd SaveAndClose}")
-						),
-						new XElement(ns + "Button",
-							new XAttribute("Content", "Закрити"),
-							new XAttribute("Command", "{BindCmd Close}")
-						)
-					),
-					new XElement(ns + "Grid")
-				)
-			);
-			return doc.ToString();
-		}
-
-		public void BuildCatalogFiles(String path, ITable table)
-		{
-			if (table.features == null)
-				return;
-			String xaml = CreateIndexView(table);
-			if (xaml != null)
-			{
-				String indexViewFile = $"{path}/index.view.xaml";
-				File.WriteAllText(indexViewFile, xaml);
-			}
-			xaml = CreateEditDialog(table);
-			if (xaml != null)
-			{
-				String dialogViewFile = $"{path}/edit.dialog.xaml";
-				File.WriteAllText(dialogViewFile, xaml);
-			}
+			var ed = new EditDialogBuilder();
+			return ed.Build(table);
 		}
 	}
 }

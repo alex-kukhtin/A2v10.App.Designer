@@ -2,23 +2,34 @@
 using System;
 using System.Text;
 using System.Linq;
+using A2v10.App.Builder.Interfaces;
 
-namespace A2v10.App.Builder
+namespace A2v10.App.Builder.SqlServer
 {
-	public class SqlBuilder
+	public class SqlBuilder : ISqlBuilder
 	{
 		public const String divider = "-------------------------------------";
 		const Int32 PAGE_SIZE = 20;
 
-		public SqlBuilder()
+		private readonly SqlTableTypeBuilder _tableTypeBuilder;
+		private readonly SqlProcedureBuilder _procedureBuilder;
+
+		public SqlBuilder(ISolutionOptions opts)
 		{
+			_tableTypeBuilder = new SqlTableTypeBuilder();
+			_procedureBuilder = new SqlProcedureBuilder(opts);
 		}
 
 		public String BuildProcedures(ITable model)
 		{
 			var sb = new StringBuilder();
-			sb.Append(BuildLoad(model));
-			sb.Append(BuildPagedIndex(model));
+			sb.Append(BuildPagedIndex(model))
+				.Append(BuildLoad(model));
+			if (model.IsBaseTable())
+			{
+				sb.Append(_procedureBuilder.BuildMetadata(model));
+				sb.Append(_procedureBuilder.BuildUpdate(model));
+			}
 			return sb.ToString();
 		}
 
@@ -97,8 +108,6 @@ go
 			{
 				foreach (var f in table.fields)
 				{
-					if (f.Value.parameter)
-						continue;
 					sb.Append($" {alias}.[{f.Key}],");
 				}
 			}
@@ -208,8 +217,7 @@ begin
 	from [{table.Schema}].[{tableName}] {alias}
 	where {alias}.Id = @Id;
 end
-go
-");
+go");
 			return sb.ToString();
 		}
 
@@ -229,6 +237,17 @@ go
 		{
 			var tb = new SqlTableBuilder(table, null);
 			return tb.BuildTable();
+		}
+
+
+		public String BuldTableType(ITable table)
+		{
+			return _tableTypeBuilder.Build(table);
+		}
+
+		public String BuldDropBeforeTableType(ITable table)
+		{
+			return _procedureBuilder.BuildDropBeforeTableType(table);
 		}
 	}
 }

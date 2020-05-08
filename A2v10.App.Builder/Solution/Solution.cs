@@ -76,17 +76,17 @@ namespace A2v10.App.Builder
 
 		public IEnumerable<ITable> AllTables()
 		{
-			foreach (var c in catalogs.Where(x => String.IsNullOrEmpty(x.Value.extends)))
-				yield return c.Value;
-			foreach (var d in documents.Where(x => String.IsNullOrEmpty(x.Value.extends))) {
-				yield return d.Value;
-				if (d.Value.details != null)
-					foreach (var dd in d.Value.details.Where(x => String.IsNullOrEmpty(x.Value.extends)))
-						yield return dd.Value;
+			foreach (var c in catalogs.Values.Where(x => x.IsBaseTable()))
+				yield return c;
+			foreach (var d in documents.Values.Where(x => x.IsBaseTable())) {
+				yield return d;
+				if (d.details != null)
+					foreach (var dd in d.details.Values.Where(x => x.IsBaseTable()))
+						yield return dd;
 			}
-			foreach (var d in journals.Where(x => String.IsNullOrEmpty(x.Value.extends)))
+			foreach (var j in journals.Values.Where(x => x.IsBaseTable()))
 			{
-				yield return d.Value;
+				yield return j;
 			}
 		}
 

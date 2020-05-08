@@ -10,39 +10,38 @@ namespace A2v10.App.Builder
 	public class AppBuilder
 	{
 		private readonly Solution _solution;
-		private readonly Styles _styles;
-		private readonly String _basePath;
+		private readonly IViewBuilder _viewBuilder;
+		private readonly ISqlBuilder _sqlBuilder;
 
-		public AppBuilder(Solution solution, Styles styles, String path)
+		private readonly CatalogTemplateBuilder _templateBuilder;
+
+		public AppBuilder(Solution solution, IViewBuilder viewBuilder, ISqlBuilder sqlBuilder)
 		{
 			_solution = solution;
-			_styles = styles;
-			_basePath = path;
+			_viewBuilder = viewBuilder;
+			_sqlBuilder = sqlBuilder;
+			_templateBuilder = new CatalogTemplateBuilder();
 		}
 
-		public void Build()
+		public void Build(String basePath)
 		{
-			BuildCatalogs();
-			BuildDocuments();
+			BuildCatalogs(basePath);
+			BuildDocuments(basePath);
 		}
 
-		void BuildCatalogs()
+		void BuildCatalogs(String basePath)
 		{
-			var xamlBuilder = new XamlBuilder(_styles);
-			var templateBuilder = new CatalogTemplateBuilder();
 			foreach (var c in _solution.catalogs)
 			{
 				ITable catalog = c.Value;
-				String dir = $"{_basePath}/catalog/{c.Key.ToLowerInvariant()}";
+				String dir = $"{basePath}/catalog/{c.Key.ToLowerInvariant()}";
 				Directory.CreateDirectory(dir);
 
 				String modelJsonfile = $"{dir}/model.json";
 				File.WriteAllText(modelJsonfile, BuildCatalogModelJson(catalog));
 
-				xamlBuilder.BuildCatalogFiles(dir, catalog);
-				templateBuilder.BuildCatalogFiles(_basePath, catalog);
-				//String indexViewFile = $"{dir}/index.view.xaml";
-				//File.WriteAllText(indexViewFile, xamlBuilder.CreateIndexView(catalog));
+				BuildCatalogFiles(dir, catalog);
+				_templateBuilder.BuildFiles("catalog", basePath, catalog);
 				//Console.WriteLine("----TEMPLATE---");
 				//Console.WriteLine();
 				//Console.WriteLine("----SQL ---");
@@ -50,43 +49,81 @@ namespace A2v10.App.Builder
 			}
 		}
 
+		void BuildCatalogFiles(String dir, ITable table)
+		{
+			if (table.features == null)
+				return;
+			String xaml = _viewBuilder.IndexView(table);
+			if (xaml != null)
+			{
+				String indexViewFile = $"{dir}/index.view.{_viewBuilder.Extension}";
+				File.WriteAllText(indexViewFile, xaml);
+			}
+			if (table.HasFeature("editDialog")) {
+				xaml = _viewBuilder.EditDialog(table);
+				if (xaml != null)
+				{
+					String dialogViewFile = $"{dir}/edit.dialog.{_viewBuilder.Extension}";
+					File.WriteAllText(dialogViewFile, xaml);
+				}
+			}
+		}
+
+		void BuildDocumentFiles(String dir, ITable table)
+		{
+			String xaml = _viewBuilder.IndexView(table);
+			if (xaml != null)
+			{
+				String indexViewFile = $"{dir}/index.view.{_viewBuilder.Extension}";
+				File.WriteAllText(indexViewFile, xaml);
+			}
+		}
+
 		public void BuildSql(String path)
 		{
-			var sqlBuilder = new SqlBuilder();
 			var sb = new StringBuilder();
+
 			// header
 			// TODO:
 
 			sb.AppendLine("-- SCHEMAS");
 			foreach (var c in _solution.AllSchemas())
-				sb.AppendLine(sqlBuilder.BuildSchema(c));
+				sb.AppendLine(_sqlBuilder.BuildSchema(c));
 
 			sb.AppendLine("-- TABLES");
 			foreach (var t in _solution.AllTables())
-				sb.AppendLine(sqlBuilder.BuildTable(t));
+				sb.AppendLine(_sqlBuilder.BuildTable(t));
 			sb.AppendLine();
 
-			// table types
-			// TODO:
+			sb.AppendLine("-- TABLE TYPES");
+			foreach (var c in _solution.AllTables())
+				sb.Append(_sqlBuilder.BuldDropBeforeTableType(c));
+
+			foreach (var c in _solution.AllTables())
+				sb.Append(_sqlBuilder.BuldTableType(c));
 
 			sb.AppendLine("-- PROCEDURES");
-			foreach (var c in _solution.catalogs.Where(x => String.IsNullOrEmpty(x.Value.extends)))
-			{
-				sb.Append(sqlBuilder.BuildProcedures(c.Value));
-			}
+			foreach (var c in _solution.catalogs.Values.Where(x => x.IsBaseTable()))
+				sb.Append(_sqlBuilder.BuildProcedures(c));
+
+			foreach (var d in _solution.documents.Values.Where(x => x.IsBaseTable()))
+				sb.Append(_sqlBuilder.BuildProcedures(d));
 
 			File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
 		}
 
-		void BuildDocuments()
+		void BuildDocuments(String basePath)
 		{
 			foreach (var d in _solution.documents)
 			{
-				ITable table = d.Value;
-				String dir = $"{_basePath}/document/{table.name.ToLowerInvariant()}";
+				ITable document = d.Value;
+				String dir = $"{basePath}/document/{document.name.ToLowerInvariant()}";
 				Directory.CreateDirectory(dir);
 				String modelJsonfile = $"{dir}/model.json";
-				File.WriteAllText(modelJsonfile, BuildCatalogModelJson(table));
+				File.WriteAllText(modelJsonfile, BuildCatalogModelJson(document));
+				_templateBuilder.BuildFiles("document", basePath, document);
+
+				BuildDocumentFiles(dir, document);
 			}
 		}
 

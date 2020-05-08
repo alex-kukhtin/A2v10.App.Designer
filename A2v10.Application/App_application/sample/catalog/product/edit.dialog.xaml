@@ -3,5 +3,10 @@
     <Button Content="Зберегти" Command="{BindCmd SaveAndClose}" />
     <Button Content="Закрити" Command="{BindCmd Close}" />
   </Dialog.Buttons>
-  <Grid />
+  <Grid>
+    <TextBox Value="{Bind Product.Name}" Label="Name" />
+    <TextBox Value="{Bind Product.Article}" Label="Артикул" />
+    <TextBox Value="{Bind Product.FullName}" Label="FullName" />
+    <TextBox Value="{Bind Product.Memo}" Label="Memo" />
+  </Grid>
 </Dialog>

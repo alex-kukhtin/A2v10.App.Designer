@@ -16,12 +16,12 @@ namespace A2v10.App.Builder
 	public class CatalogTemplateBuilder
 	{
 
-		public void BuildCatalogFiles(String basePath, ITable table)
+		public void BuildFiles(String prefix, String basePath, ITable table)
 		{
-			if (!String.IsNullOrEmpty(table.extends))
-				return;
+			//if (!String.IsNullOrEmpty(table.extends))
+				//return;
 
-			String dir = $"catalog/{table.name.ToLowerInvariant()}";
+			String dir = $"{prefix}/{table.name.ToLowerInvariant()}";
 
 			String template = BuildIndexTemplate(table);
 			Console.WriteLine($"{dir}/index.template.ts");
@@ -78,7 +78,8 @@ export default template;
 
 		String CreateCommands(StringBuilder sb, ITable catalog)
 		{
-			var fetch = catalog.features?.Find(s => s == "fetch");
+			var fetch = catalog.HasFeature("fetch");
+
 			return String.Empty;
 		}
 

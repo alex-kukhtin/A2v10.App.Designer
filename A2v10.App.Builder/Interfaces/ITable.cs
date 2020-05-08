@@ -20,7 +20,14 @@ namespace A2v10.App.Builder
 		String Plural { get; }
 
 		ITable GetParentTable();
-
 		ITable GetBaseTable();
+
+		Boolean HasFeature(String feature);
+		Boolean IsBaseTable();
+	}
+
+	public interface IModel : ITable
+	{
+
 	}
 }

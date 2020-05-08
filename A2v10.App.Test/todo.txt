@@ -1,13 +1,11 @@
 ﻿
 
-3. Element.Load add parameters to where. (and a.Kind = @Kind)
-4. TableTypes
-5. Metadata/Update procedure
-4. edit.dialog.xaml
 5. Document.Index procedure
 6. Document.Edit xaml
 7. Index page. Filter textbox
 8. Index load/page. Linked tables (Products/Units)
-9. order.toLowerCase (in collectionView component (doSort)) A2v10.
 10. solution. appName (now 'sample')
+11. Xaml. NameFactory => BuildName(String uiName, String name) ???
+12. Generate only needed files
+13. A2v10. First Click => order => toLowerCase()
 

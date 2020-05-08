@@ -4,8 +4,8 @@
   </Page.CollectionView>
   <Page.Toolbar>
     <Toolbar>
-      <Button Icon="Add" Content="Додати" Command="{BindCmd Dialog, Action=Append, Argument={Bind Parent.ItemsSource}, Url='/catalog/Agent/edit'}" />
-      <Button Icon="Edit" Content="Змінити" Command="{BindCmd Dialog, Action=EditSelected, Argument={Bind Parent.ItemsSource}, Url='/catalog/Agent/edit'}" />
+      <Button Icon="Add" Content="Додати" Command="{BindCmd Dialog, Action=Append, Argument={Bind Parent.ItemsSource}, Url='/catalog/agent/edit'}" />
+      <Button Icon="Edit" Content="Змінити" Command="{BindCmd Dialog, Action=EditSelected, Argument={Bind Parent.ItemsSource}, Url='/catalog/agent/edit'}" />
       <Separator />
       <Button Icon="Reload" Content="Оновити" Command="{BindCmd Reload}" />
     </Toolbar>

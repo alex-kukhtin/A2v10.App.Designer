@@ -3,8 +3,8 @@
   "model": "Agent",
   "actions": {
     "index": {
-      "template": "../agent/index.template",
-      "view": "../agent/index.view",
+      "template": "index.template",
+      "view": "index.view",
       "index": true,
       "parameters": {
         "Kind": "CUST"

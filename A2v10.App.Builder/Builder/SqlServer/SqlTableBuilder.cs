@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace A2v10.App.Builder
+namespace A2v10.App.Builder.SqlServer
 {
 	public enum IdType 
 	{ 
@@ -24,7 +24,7 @@ namespace A2v10.App.Builder
 
 		public SqlTableBuilder(ITable table, SqlTableOptions opts)
 		{
-			_table = table;
+			_table = table.GetBaseTable();
 			_opts = opts;
 		}
 

@@ -51,5 +51,15 @@ namespace A2v10.App.Builder
 					d.Value._parentTable = this;
 				}
 		}
+
+		public Boolean HasFeature(String feature)
+		{
+			return features != null && features.Contains(feature);
+		}
+
+		public Boolean IsBaseTable()
+		{
+			return String.IsNullOrEmpty(extends);
+		}
 	}
 }

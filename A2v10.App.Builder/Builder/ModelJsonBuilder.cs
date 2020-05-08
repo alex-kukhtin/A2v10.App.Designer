@@ -35,8 +35,8 @@ namespace A2v10.App.Builder
 					{"index", new ModelAction()
 						{
 							index = true,
-							template = $"{parentLink}index.template",
-							view = $"{parentLink}index.view",
+							template = $"index.template",
+							view = $"index.view",
 							parameters = prms
 						}
 					}

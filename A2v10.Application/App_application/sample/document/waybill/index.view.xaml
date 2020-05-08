@@ -1,12 +1,9 @@
 <Page xmlns="clr-namespace:A2v10.Xaml;assembly=A2v10.Xaml">
   <Page.CollectionView>
-    <CollectionView RunAt="ServerUrl" ItemsSource="{Bind Products}" />
+    <CollectionView RunAt="ServerUrl" ItemsSource="{Bind Documents}" />
   </Page.CollectionView>
   <Page.Toolbar>
     <Toolbar>
-      <Button Icon="Add" Content="Додати" Command="{BindCmd Dialog, Action=Append, Argument={Bind Parent.ItemsSource}, Url='/catalog/product/edit'}" />
-      <Button Icon="Edit" Content="Змінити" Command="{BindCmd Dialog, Action=EditSelected, Argument={Bind Parent.ItemsSource}, Url='/catalog/product/edit'}" />
-      <Separator />
       <Button Icon="Reload" Content="Оновити" Command="{BindCmd Reload}" />
     </Toolbar>
   </Page.Toolbar>
@@ -15,9 +12,9 @@
   </Page.Pager>
   <DataGrid ItemsSource="{Bind Parent.ItemsSource}" GridLines="Horizontal" Hover="True" Striped="True" FixedHeader="True" Style="Light" Sort="True">
     <DataGridColumn Header="Код" Content="{Bind Id}" Align="Right" Wrap="NoWrap" Fit="True" />
-    <DataGridColumn Header="Name" Content="{Bind Name}" />
-    <DataGridColumn Header="Артикул" Content="{Bind Article}" />
-    <DataGridColumn Header="FullName" Content="{Bind FullName}" />
+    <DataGridColumn Header="Date" Content="{Bind Date}" />
+    <DataGridColumn Header="Customer" Content="{Bind Customer}" />
+    <DataGridColumn Header="Sum" Content="{Bind Sum}" />
     <DataGridColumn Header="Memo" Content="{Bind Memo}" />
   </DataGrid>
 </Page>

@@ -3,8 +3,8 @@
   "model": "Document",
   "actions": {
     "index": {
-      "template": "../document/index.template",
-      "view": "../document/index.view",
+      "template": "index.template",
+      "view": "index.view",
       "index": true,
       "parameters": {
         "Kind": "WBIN"

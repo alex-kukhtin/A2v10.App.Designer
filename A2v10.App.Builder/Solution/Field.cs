@@ -16,7 +16,7 @@ namespace A2v10.App.Builder
 		@ref
 	}
 
-	public class Field : ElementBase
+	public class Field : ElementBase, IField
 	{
 		public Boolean parameter { get; set; }
 
@@ -27,9 +27,9 @@ namespace A2v10.App.Builder
 		public Boolean required { get; set; }
 
 		[JsonProperty("ref")]
-		public String reference {get; set;}
+		public String reference { get; set; }
 
-		public String SqlType() { 
+		public String SqlType() {
 			switch (type)
 			{
 				case FieldType.@string:
@@ -90,5 +90,12 @@ namespace A2v10.App.Builder
 		{
 			return type == FieldType.date;
 		}
+
+		#region IField
+		public String GetLabel()
+		{
+			return uiName != null ? uiName : name;
+		}
+		#endregion
 	}
 }
