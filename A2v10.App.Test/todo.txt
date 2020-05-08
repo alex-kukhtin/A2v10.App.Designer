@@ -8,4 +8,7 @@
 11. Xaml. NameFactory => BuildName(String uiName, String name) ???
 12. Generate only needed files
 13. A2v10. First Click => order => toLowerCase()
+14. Document.Update = некрасивая запятая
+15. Document.Update. Обновление строк.
+16. Document.Metadata. Нету строк.
 
