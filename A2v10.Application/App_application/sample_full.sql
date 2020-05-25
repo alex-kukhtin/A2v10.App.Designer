@@ -96,9 +96,9 @@ create table [sample].[Documents]
 		constraint PK_Documents primary key,
 	[Kind] nchar(4) null,
 	[Date] date null,
+	[Sum] money null,
 	[Customer] bigint null
 		constraint FK_Documents_Customer_Agents references [sample].[Agents](Id),
-	[Sum] money null,
 	[Memo] nvarchar(255) null,
 	DateCreated datetime not null constraint DF_Documents_DateCreated default(a2sys.fn_getCurrentDate()),
 	DateModified datetime not null constraint DF_Documents_DateModified default(a2sys.fn_getCurrentDate())
@@ -218,8 +218,8 @@ as table (
 	Id bigint,
 	[Kind] nchar(4),
 	[Date] date,
-	[Customer] bigint,
 	[Sum] money,
+	[Customer] bigint,
 	[Memo] nvarchar(255)
 )
 go
@@ -333,6 +333,7 @@ as
 begin
 	set nocount on;
 	set transaction isolation level read uncommitted;
+
 	declare @Agent [sample].[Agent.TableType];
 
 	select [Agent!Agent!Metadata] = null, * from @Agent;
@@ -459,6 +460,7 @@ as
 begin
 	set nocount on;
 	set transaction isolation level read uncommitted;
+
 	declare @Unit [sample].[Unit.TableType];
 
 	select [Unit!Unit!Metadata] = null, * from @Unit;
@@ -585,6 +587,7 @@ as
 begin
 	set nocount on;
 	set transaction isolation level read uncommitted;
+
 	declare @Product [sample].[Product.TableType];
 
 	select [Product!Product!Metadata] = null, * from @Product;
@@ -718,7 +721,7 @@ begin
 	from 
 		[sample].[Documents] d
 	where 
-		d.Kind = @Kind and (@Fragment is null or upper(d.Date) like @Fragment or upper(d.Customer) like @Fragment or upper(d.Sum) like @Fragment or upper(d.Memo) like @Fragment)
+		d.Kind = @Kind and (@Fragment is null or upper(d.Date) like @Fragment or upper(d.Sum) like @Fragment or upper(d.Customer) like @Fragment or upper(d.Memo) like @Fragment)
 	order by 
 	case when @Dir=N'asc' then
 		case @Order
@@ -744,7 +747,7 @@ begin
 	offset @Offset rows fetch next @PageSize rows only
 	option (recompile);
 
-	select [Documents!TDocument!Array] = null, [Id!!Id] = d.Id, d.[Kind], d.[Date], d.[Customer], d.[Sum], d.[Memo],
+	select [Documents!TDocument!Array] = null, [Id!!Id] = d.Id, d.[Kind], d.[Date], d.[Sum], [Customer!TCustomer!RefId] = d.[Customer], d.[Memo],
 		[!!RowCount] = t._rows
 	from [sample].[Documents] d inner join @paged t on t._id = d.Id
 	order by t._no;
@@ -765,7 +768,7 @@ as
 begin
 	set nocount on;
 	set transaction isolation level read uncommitted;
-	select [Document!TDocument!Object] = null, [Id!!Id] = d.Id, d.[Kind], d.[Date], d.[Customer], d.[Sum], d.[Memo]
+	select [Document!TDocument!Object] = null, [Id!!Id] = d.Id, d.[Kind], d.[Date], d.[Sum], [Customer!TCustomer!RefId] = d.[Customer], d.[Memo]
 	from [sample].[Documents] d
 	where d.Id = @Id;
 end
@@ -776,19 +779,20 @@ as
 begin
 	set nocount on;
 	set transaction isolation level read uncommitted;
+
 	declare @Document [sample].[Document.TableType];
+	declare @Rows [sample].[Row.TableType];
 
 	select [Document!Document!Metadata] = null, * from @Document;
+	select [Rows!Document.Rows!Metadata]=null, * from @Rows;
 end
 go
 -------------------------------------
 create or alter procedure [sample].[Document.Update]
 @UserId bigint,
 @Kind nchar(4) = null,
-@Document [sample].[Document.TableType] readonly
-,
-@Row [sample].[Row.TableType] readonly
-
+@Document [sample].[Document.TableType] readonly,
+@Rows [sample].[Row.TableType] readonly
 as
 begin
 	set transaction isolation level read committed;
@@ -802,13 +806,13 @@ begin
 	on (t.Id = s.Id)
 	when matched then update set 
 		t.[Date] = s.[Date],
-		t.[Customer] = s.[Customer],
 		t.[Sum] = s.[Sum],
+		t.[Customer] = s.[Customer],
 		t.[Memo] = s.[Memo],
 		DateModified = a2sys.fn_getCurrentDate()
 	when not matched by target then 
-	insert ([Kind], [Date], [Customer], [Sum], [Memo])
-	values (@Kind, [Date], [Customer], [Sum], [Memo])
+	insert ([Kind], [Date], [Sum], [Customer], [Memo])
+	values (@Kind, [Date], [Sum], [Customer], [Memo])
 
 	output $action, inserted.Id into @output(op, id);
 	

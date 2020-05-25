@@ -1,4 +1,5 @@
 ﻿
+using A2v10.App.Builder.Xaml;
 using Microsoft.VisualBasic;
 using System;
 using System.Collections.Generic;
@@ -13,10 +14,14 @@ namespace A2v10.App.Builder.Xaml
 		public static XNamespace XamlNamespace { get; } = "clr-namespace:A2v10.Xaml;assembly=A2v10.Xaml";
 
 		private readonly Styles _styles;
+		private readonly DataGridBuilder _dataGridBuilder;
 
 		public XamlBuilder(Styles styles)
 		{
 			_styles = styles;
+			_dataGridBuilder = new DataGridBuilder(_styles);
+
+
 		}
 
 		public String Extension => "xaml";
@@ -32,43 +37,6 @@ namespace A2v10.App.Builder.Xaml
 			}
 		}
 
-		XElement CreateDataGrid(String itemsSource, ITable table)
-		{
-			var dg = new XElement(XamlNamespace + "DataGrid",
-				new XAttribute("ItemsSource", $"{{Bind {itemsSource}}}")
-			);
-			SetElementStyle(dg);
-			dg.Add(GetDataGridColums(table));
-			return dg;
-		}
-
-		IEnumerable<XElement> GetDataGridColums(ITable table)
-		{
-			yield return new XElement(XamlNamespace + "DataGridColumn",
-				new XAttribute("Header", "Код"),
-				new XAttribute("Content", "{Bind Id}"),
-				new XAttribute("Align", "Right"),
-				new XAttribute("Wrap", "NoWrap"),
-				new XAttribute("Fit", "True")
-			);
-
-			if (table.fields == null)
-				yield break;
-			foreach (var f in table.fields)
-			{
-				if (f.Value.parameter)
-					continue;
-				var name = f.Value.uiName;
-				if (String.IsNullOrEmpty(name))
-					name = f.Key;
-				var col = new XElement(XamlNamespace + "DataGridColumn",
-					new XAttribute("Header", name),
-					new XAttribute("Content", $"{{Bind {f.Key}}}")
-				);
-				yield return col;
-			}
-
-		}
 
 		XElement CreatePager(String source)
 		{
@@ -81,7 +49,7 @@ namespace A2v10.App.Builder.Xaml
 
 		public String IndexView(ITable table)
 		{
-			if (!table.HasFeature("index"))
+			if (!table.HasFeature(Feature.index))
 				return null;
 			var baseTable = table.GetBaseTable();
 			XNamespace ns = XamlBuilder.XamlNamespace;
@@ -110,16 +78,17 @@ namespace A2v10.App.Builder.Xaml
 				)
 			);
 
-			doc.Add(CreateDataGrid("Parent.ItemsSource", baseTable));
+			doc.Add(_dataGridBuilder.BuildDataGrid(baseTable, "Parent.ItemsSource"));
 
 			return doc.ToString();
 		}
 
 		IEnumerable<XElement> CreateToolbarButtons(ITable table)
 		{
+			// TODO /catalog/document????
 			XNamespace ns = XamlBuilder.XamlNamespace;
 			var tn = table.name.ToLowerInvariant();
-			if (table.HasFeature("editDialog"))
+			if (table.HasFeature(Feature.editDialog))
 			{
 				yield return new XElement(ns + "Button",
 					new XAttribute("Icon", "Add"),
@@ -133,15 +102,42 @@ namespace A2v10.App.Builder.Xaml
 				);
 				yield return new XElement(ns + "Separator");
 			}
+			else if (table.HasFeature(Feature.editPage))
+			{
+				yield return new XElement(ns + "Button",
+					new XAttribute("Icon", "Add"),
+					new XAttribute("Content", "Створити"),
+					new XAttribute("Command", $"{{BindCmd Create, Url='/document/{tn}/edit'}}")
+				);
+				yield return new XElement(ns + "Button",
+					new XAttribute("Icon", "ArrowOpen"),
+					new XAttribute("Content", "Відкрити"),
+					new XAttribute("Command", $"{{BindCmd OpenSelected, Argument={{Bind Parent.ItemsSource}}, Url='/document/{tn}/edit'}}")
+				);
+				yield return new XElement(ns + "Separator");
+			}
 		}
 
 
 		public String EditDialog(ITable table)
 		{
-			if (!table.HasFeature("editDialog"))
+			if (!table.HasFeature(Feature.editDialog))
 				return null;
 			var ed = new EditDialogBuilder();
 			return ed.Build(table);
+		}
+
+		public String EditView(ITable table)
+		{
+			if (!table.HasFeature(Feature.editPage))
+				return null;
+			var ev = new EditViewBuilder();
+			return ev.Build(table);
+		}
+
+		public String BrowseDialog(ITable table)
+		{
+			return null;
 		}
 	}
 }

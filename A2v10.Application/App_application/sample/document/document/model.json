@@ -6,6 +6,10 @@
       "template": "index.template",
       "view": "index.view",
       "index": true
+    },
+    "edit": {
+      "template": "edit.template",
+      "view": "edit.view"
     }
   },
   "dialogs": {

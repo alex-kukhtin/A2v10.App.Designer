@@ -20,7 +20,7 @@ namespace A2v10.App.Builder
 		public String extends {get;set;}
 
 		public Dictionary<String, Field> fields { get; set; }
-		public List<String> features { get; set; }
+		public List<Feature> features { get; set; }
 		public Dictionary<String, Table> details { get; set; }
 		public Dictionary<String, String> parameters { get; set; }
 
@@ -52,7 +52,7 @@ namespace A2v10.App.Builder
 				}
 		}
 
-		public Boolean HasFeature(String feature)
+		public Boolean HasFeature(Feature feature)
 		{
 			return features != null && features.Contains(feature);
 		}

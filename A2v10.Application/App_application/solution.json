@@ -34,7 +34,7 @@
 		},
 		"Customer": {
 			"extends": "Agent",
-			"uiName": "Покупатели",
+			"uiName": "Покупатель",
 			"parameters": {
 				"Kind": "CUST"
 			},
@@ -82,13 +82,13 @@
 					"type": "date",
 					"default": "Today"
 				},
-				"Customer": {
-					"type": "ref",
-					"ref": "Customer"
-				},
 				"Sum": {
 					"type": "money",
 					"calc": "this.Rows.$sum(r => r.Sum)"
+				},
+				"Customer": {
+					"type": "ref",
+					"ref": "Customer"
 				},
 				"Memo": {}
 			},
@@ -114,10 +114,11 @@
 						"Memo": {}
 					}
 				}
-			}
+			},
+			"features": [ "editPage" ]
 		},
 		"Waybill": {
-			"uiName": "Приходная накладная",
+			"uiName": "Прибуткова накладна",
 			"extends": "Document",
 			"parameters": {
 				"Kind": "WBIN"

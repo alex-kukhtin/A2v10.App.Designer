@@ -9,6 +9,13 @@
       "parameters": {
         "Kind": "WBIN"
       }
+    },
+    "edit": {
+      "template": "../document/edit.template",
+      "view": "../document/edit.view",
+      "parameters": {
+        "Kind": "WBIN"
+      }
     }
   },
   "dialogs": {

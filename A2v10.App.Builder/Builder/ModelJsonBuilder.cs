@@ -59,7 +59,7 @@ namespace A2v10.App.Builder
 				{
 					switch (f)
 					{
-						case "browse":
+						case Feature.browse:
 							m.dialogs.Add("browse", new ModelDialog
 							{
 								index = true,
@@ -67,13 +67,21 @@ namespace A2v10.App.Builder
 								parameters = prms
 							});
 							break;
-						case "fetch":
+						case Feature.fetch:
 							if (m.commands == null)
 								m.commands = new Dictionary<String, ModelCommand>();
 							m.commands.Add("fetch", new ModelCommand()
 							{
 								type = CommandType.sql,
 								procedure = $"{baseTable.name}.Fetch",
+								parameters = prms
+							});
+							break;
+						case Feature.editPage:
+							m.actions.Add("edit", new ModelAction
+							{
+								view = $"{parentLink}edit.view",
+								template = $"{parentLink}edit.template",
 								parameters = prms
 							});
 							break;

@@ -45,7 +45,7 @@ sb.AppendLine(
 @$"{divider}
 create or alter procedure [{model.Schema}].[{model.name}.Index]
 @UserId bigint,
-@Id bigint = null,{GetProcParams(table)}
+@Id bigint = null,{_procedureBuilder.GetProcParams(table)}
 @Offset int = 0,
 @PageSize int = {PAGE_SIZE},
 @Order nvarchar(255) = N'Id',
@@ -108,7 +108,10 @@ go
 			{
 				foreach (var f in table.fields)
 				{
-					sb.Append($" {alias}.[{f.Key}],");
+					if (f.Value.type == FieldType.@ref)
+						sb.Append($" [{f.Key}!{f.Value.TypeName}!RefId] = {alias}.[{f.Key}],");
+					else
+						sb.Append($" {alias}.[{f.Key}],");
 				}
 			}
 			return sb.RemoveLastComma().ToString();
@@ -136,20 +139,6 @@ go
 			foreach (var f in fields)
 			{
 				sb.Append($" or upper({alias}.{f.Key}) like @Fragment");
-			}
-			return sb.ToString();
-		}
-
-		String GetProcParams(ITable table)
-		{
-			var prms = table.fields?.Where(x => x.Value.parameter);
-			if (prms == null)
-				return String.Empty;
-			var sb = new StringBuilder();
-			foreach (var f in prms)
-			{
-				sb.AppendLine();
-				sb.Append($"@{f.Key} {f.Value.SqlType()} = null,");
 			}
 			return sb.ToString();
 		}
@@ -207,7 +196,7 @@ go
 			sb.AppendLine(
 			@$"{divider}
 create or alter procedure [{model.Schema}].[{model.name}.Load]
-@UserId bigint,{GetProcParams(table)}
+@UserId bigint,{_procedureBuilder.GetProcParams(table)}
 @Id bigint = null
 as 
 begin

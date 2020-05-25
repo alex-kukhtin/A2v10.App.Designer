@@ -78,7 +78,7 @@ export default template;
 
 		String CreateCommands(StringBuilder sb, ITable catalog)
 		{
-			var fetch = catalog.HasFeature("fetch");
+			var fetch = catalog.HasFeature(Feature.fetch);
 
 			return String.Empty;
 		}

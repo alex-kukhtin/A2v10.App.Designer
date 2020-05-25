@@ -1,0 +1,21 @@
+<Page xmlns="clr-namespace:A2v10.Xaml;assembly=A2v10.Xaml">
+  <Page.Toolbar>
+    <Toolbar>
+      <Button Icon="Save" Content="Зберегти" Command="{BindCmd Save}" />
+      <Button Icon="Reload" Content="Оновити" Command="{BindCmd Reload}" />
+      <Button Icon="Close" Content="Закрити" Toolbar.Align="Right" Command="{BindCmd Close}" />
+    </Toolbar>
+  </Page.Toolbar>
+  <Page.Taskpad>
+    <Taskpad />
+  </Page.Taskpad>
+  <Grid Columns="30rem">
+    <DatePicker Label="Date" Value="{Bind Document.Date}" />
+    <TextBox Label="Sum" Value="{Bind Document.Sum, DataType=Currency}" Align="Right" />
+    <Selector Label="Customer" Value="{Bind Document.Customer}">
+      <Selector.AddOns>
+        <Hyperlink Icon="Search" Command="{BindCmd Dialog, Action=Browse, Argument={Bind Document.Customer}, Url='/catalog/customer/browse'}" />
+      </Selector.AddOns>
+    </Selector>
+  </Grid>
+</Page>

@@ -34,13 +34,14 @@ namespace A2v10.App.Builder
 			foreach (var c in _solution.catalogs)
 			{
 				ITable catalog = c.Value;
-				String dir = $"{basePath}/catalog/{c.Key.ToLowerInvariant()}";
-				Directory.CreateDirectory(dir);
+				String tail = $"catalog/{c.Key.ToLowerInvariant()}";
+				String dirName = $"{basePath}/{tail}";
+				Directory.CreateDirectory(dirName);
 
-				String modelJsonfile = $"{dir}/model.json";
+				String modelJsonfile = $"{dirName}/model.json";
 				File.WriteAllText(modelJsonfile, BuildCatalogModelJson(catalog));
 
-				BuildCatalogFiles(dir, catalog);
+				BuildCatalogFiles(tail, dirName, catalog);
 				_templateBuilder.BuildFiles("catalog", basePath, catalog);
 				//Console.WriteLine("----TEMPLATE---");
 				//Console.WriteLine();
@@ -49,33 +50,58 @@ namespace A2v10.App.Builder
 			}
 		}
 
-		void BuildCatalogFiles(String dir, ITable table)
+		void BuildCatalogFiles(String tail, String dir, ITable table)
 		{
 			if (table.features == null)
 				return;
 			String xaml = _viewBuilder.IndexView(table);
 			if (xaml != null)
 			{
-				String indexViewFile = $"{dir}/index.view.{_viewBuilder.Extension}";
-				File.WriteAllText(indexViewFile, xaml);
+				String fileName = $"index.view.{_viewBuilder.Extension}";
+				Console.WriteLine($"{tail}/{fileName}");
+				File.WriteAllText($"{dir}/{fileName}", xaml);
 			}
-			if (table.HasFeature("editDialog")) {
+			if (table.HasFeature(Feature.editDialog)) {
 				xaml = _viewBuilder.EditDialog(table);
 				if (xaml != null)
 				{
-					String dialogViewFile = $"{dir}/edit.dialog.{_viewBuilder.Extension}";
-					File.WriteAllText(dialogViewFile, xaml);
+					String fileName = $"edit.dialog.{_viewBuilder.Extension}";
+					Console.WriteLine($"{tail}/{fileName}");
+					File.WriteAllText($"{dir}/{fileName}", xaml);
 				}
 			}
+			if (table.HasFeature(Feature.browse))
+				WriteFile(tail, dir, "browse.dialog", _viewBuilder.BrowseDialog(table));
 		}
 
-		void BuildDocumentFiles(String dir, ITable table)
+		void WriteFile(String tail, String dir, String name, String text)
 		{
-			String xaml = _viewBuilder.IndexView(table);
-			if (xaml != null)
+			String fileName = $"{name}.{_viewBuilder.Extension}";
+			Console.WriteLine($"{tail}/{fileName}");
+			File.WriteAllText($"{dir}/{fileName}", text);
+		}
+
+		void BuildDocumentFiles(String tail, String dir, ITable table)
+		{
+			if (table.HasFeature(Feature.index))
 			{
-				String indexViewFile = $"{dir}/index.view.{_viewBuilder.Extension}";
-				File.WriteAllText(indexViewFile, xaml);
+				String xaml = _viewBuilder.IndexView(table);
+				if (xaml != null)
+				{
+					String fileName = $"index.view.{_viewBuilder.Extension}";
+					Console.WriteLine($"{tail}/{fileName}");
+					File.WriteAllText($"{dir}/{fileName}", xaml);
+				}
+			}
+			if (table.HasFeature(Feature.editPage))
+			{
+				String xaml = _viewBuilder.EditView(table);
+				if (xaml != null)
+				{
+					String fileName = $"edit.view.{_viewBuilder.Extension}";
+					Console.WriteLine($"{tail}/{fileName}");
+					File.WriteAllText($"{dir}/{fileName}", xaml);
+				}
 			}
 		}
 
@@ -117,13 +143,14 @@ namespace A2v10.App.Builder
 			foreach (var d in _solution.documents)
 			{
 				ITable document = d.Value;
-				String dir = $"{basePath}/document/{document.name.ToLowerInvariant()}";
+				String tail = $"document/{d.Key.ToLowerInvariant()}";
+				String dir = $"{basePath}/{tail}";
 				Directory.CreateDirectory(dir);
 				String modelJsonfile = $"{dir}/model.json";
 				File.WriteAllText(modelJsonfile, BuildCatalogModelJson(document));
 				_templateBuilder.BuildFiles("document", basePath, document);
 
-				BuildDocumentFiles(dir, document);
+				BuildDocumentFiles(tail, dir, document);
 			}
 		}
 

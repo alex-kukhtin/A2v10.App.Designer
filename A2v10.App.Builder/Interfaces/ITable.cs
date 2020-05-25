@@ -4,6 +4,15 @@ using System.Text;
 
 namespace A2v10.App.Builder
 {
+	public enum Feature
+	{
+		index,
+		browse,
+		fetch,
+		editDialog,
+		editPage,
+	}
+
 	public interface ITable
 	{
 		String name { get; }
@@ -13,7 +22,7 @@ namespace A2v10.App.Builder
 		Dictionary<String, Table> details { get; }
 		Dictionary<String, String> parameters { get; }
 
-		List<String> features { get; set; }
+		List<Feature> features { get; set; }
 
 		String TypeName { get; }
 		String Schema { get; }
@@ -22,7 +31,7 @@ namespace A2v10.App.Builder
 		ITable GetParentTable();
 		ITable GetBaseTable();
 
-		Boolean HasFeature(String feature);
+		Boolean HasFeature(Feature feature);
 		Boolean IsBaseTable();
 	}
 

@@ -8,6 +8,8 @@ namespace A2v10.App.Builder
 	{
 		String Extension { get; }
 		String IndexView(ITable table);
+		String EditView(ITable table);
 		String EditDialog(ITable table);
+		String BrowseDialog(ITable table);
 	}
 }

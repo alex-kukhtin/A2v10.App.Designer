@@ -1,8 +1,8 @@
-﻿using A2v10.App.Builder.Interfaces;
+﻿
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using A2v10.App.Builder.Interfaces;
 
 namespace A2v10.App.Builder.SqlServer
 {
@@ -14,6 +14,21 @@ namespace A2v10.App.Builder.SqlServer
 		{
 			_opts = opts;
 		}
+
+		public String GetProcParams(ITable table)
+		{
+			var prms = table.fields?.Where(x => x.Value.parameter);
+			if (prms == null)
+				return String.Empty;
+			var sb = new StringBuilder();
+			foreach (var f in prms)
+			{
+				sb.AppendLine();
+				sb.Append($"@{f.Key} {f.Value.SqlType()} = null,");
+			}
+			return sb.ToString();
+		}
+
 
 		public String BuildMetadata(ITable model)
 		{
@@ -30,11 +45,24 @@ as
 begin
 	set nocount on;
 	set transaction isolation level read uncommitted;
-	declare @{table.name} [{table.Schema}].[{table.name}.TableType];
 
-	select [{table.name}!{table.name}!Metadata] = null, * from @{table.name};
-end
-go");
+	declare @{table.name} [{table.Schema}].[{table.name}.TableType];");
+			if (table.details != null)
+			{
+				foreach (var dd in table.details.Values)
+					sb.AppendLine($"	declare @{dd.Plural} [{dd.Schema}].[{dd.name}.TableType];");
+			}
+			// main table
+			sb.AppendLine();
+			sb.AppendLine($"	select [{table.name}!{table.name}!Metadata] = null, * from @{table.name};");
+
+			if (table.details != null)
+			{
+				foreach (var dd in table.details.Values)
+					sb.AppendLine($"	select [{dd.Plural}!{table.name}.{dd.Plural}!Metadata]=null, * from @{dd.Plural};");
+			}
+			// footer
+			sb.AppendLine($"end{Environment.NewLine}go");
 			return sb.ToString();
 		}
 
@@ -79,24 +107,19 @@ begin
 			var sb = new StringBuilder();
 			if (_opts.MultiTenant)
 				sb.AppendLine("@TenantId int = 1");
-			sb.AppendLine("@UserId bigint,");
+			sb.AppendLine($"@UserId bigint,{GetProcParams(table)}");
 
-			sb.AppendJoin(String.Empty, table.fields.Where(
-				f => f.Value.parameter).Select(
-					f => $"@{f.Key} {f.Value.SqlType()} = null,{Environment.NewLine}"
-				)
-			)
-			.AppendLine($"@{table.name} [{table.Schema}].[{table.name}.TableType] readonly");
+			sb.Append($"@{table.name} [{table.Schema}].[{table.name}.TableType] readonly");
 
 			if (table.details != null)
 			{
 				foreach (var d in table.details) {
 					var row = d.Value;
 					sb.AppendLine(",")
-					.AppendLine($"@{row.name} [{row.Schema}].[{row.name}.TableType] readonly");
+					.Append($"@{row.Plural} [{row.Schema}].[{row.name}.TableType] readonly");
 				}
-				sb.AppendLine();
 			}
+			sb.AppendLine();
 			return sb.ToString();
 		}
 
