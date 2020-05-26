@@ -1,20 +1,19 @@
-﻿
-using A2v10.App.Builder.Xaml;
-using Microsoft.VisualBasic;
+﻿/* Copyright © 2019-2020 Alex Kukhtin. All rights reserved. */
+
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text;
 using System.Xml.Linq;
 
 namespace A2v10.App.Builder.Xaml
 {
 	public class XamlBuilder : IViewBuilder
 	{
-		public static XNamespace XamlNamespace { get; } = "clr-namespace:A2v10.Xaml;assembly=A2v10.Xaml";
 
 		private readonly Styles _styles;
 		private readonly DataGridBuilder _dataGridBuilder;
+
+		public static XNamespace XamlNamespace { get; } = "clr-namespace:A2v10.Xaml;assembly=A2v10.Xaml";
+		public String Extension => "xaml";
 
 		public XamlBuilder(Styles styles)
 		{
@@ -24,27 +23,12 @@ namespace A2v10.App.Builder.Xaml
 
 		}
 
-		public String Extension => "xaml";
-
-		void SetElementStyle(XElement elem)
-		{
-			if (_styles == null)
-				return;
-			if (_styles.TryGetValue(elem.Name.LocalName, out ElementStyle elemStyle)) 
-			{
-				foreach (var s in elemStyle)
-					elem.Add(new XAttribute(s.Key, s.Value));
-			}
-		}
-
-
 		XElement CreatePager(String source)
 		{
 			var pager = new XElement(XamlNamespace + "Pager",
 				new XAttribute("Source", $"{{Bind {source}}}")
 			);
-			SetElementStyle(pager);
-			return pager;
+			return pager.SetStyle(_styles);
 		}
 
 		public String IndexView(ITable table)
@@ -123,21 +107,21 @@ namespace A2v10.App.Builder.Xaml
 		{
 			if (!table.HasFeature(Feature.editDialog))
 				return null;
-			var ed = new EditDialogBuilder();
-			return ed.Build(table);
+			return new EditDialogBuilder().Build(table);
 		}
 
 		public String EditView(ITable table)
 		{
 			if (!table.HasFeature(Feature.editPage))
 				return null;
-			var ev = new EditViewBuilder();
-			return ev.Build(table);
+			return new EditViewBuilder(_styles).Build(table);
 		}
 
 		public String BrowseDialog(ITable table)
 		{
-			return null;
+			if (!table.HasFeature(Feature.browse))
+				return null;
+			return new BrowseDialogBuilder(_styles).Build(table);
 		}
 	}
 }

@@ -29,10 +29,14 @@ namespace A2v10.App.Builder
 		[JsonIgnore]
 		public String Plural => plural == null ? name.ToPlural() : plural;
 
-		public virtual void SetParent(Solution solution, String name)
+		[JsonIgnore]
+		public TableKind Kind { get; private set; }
+
+		public virtual void SetParent(Solution solution, String name, TableKind kind)
 		{
 			_solution = solution;
 			this.name = name;
+			this.Kind = kind;
 		}
 
 		public String SerializeXml(XDocument doc)
@@ -57,11 +61,11 @@ namespace A2v10.App.Builder
 		public void SetParent()
 		{
 			foreach (var c in catalogs)
-				c.Value.SetParent(this, c.Key);
+				c.Value.SetParent(this, c.Key, TableKind.catalog);
 			foreach (var d in documents)
-				d.Value.SetParent(this, d.Key);
+				d.Value.SetParent(this, d.Key, TableKind.document);
 			foreach (var j in journals)
-				j.Value.SetParent(this, j.Key);
+				j.Value.SetParent(this, j.Key, TableKind.journal);
 		}
 
 		public IEnumerable<String> AllSchemas()

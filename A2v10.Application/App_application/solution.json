@@ -19,7 +19,8 @@
 					"type": "string",
 					"len": 50,
 					"uiName": "Назва",
-					"required": true
+					"required": true,
+					"name": true
 				},
 				"Code": {
 					"type": "string",

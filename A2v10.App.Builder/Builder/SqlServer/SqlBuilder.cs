@@ -1,8 +1,11 @@
-﻿
+﻿/* Copyright © 2019-2020 Alex Kukhtin. All rights reserved. */
+
 using System;
 using System.Text;
 using System.Linq;
 using A2v10.App.Builder.Interfaces;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace A2v10.App.Builder.SqlServer
 {
@@ -23,8 +26,10 @@ namespace A2v10.App.Builder.SqlServer
 		public String BuildProcedures(ITable model)
 		{
 			var sb = new StringBuilder();
-			sb.Append(BuildPagedIndex(model))
-				.Append(BuildLoad(model));
+			sb.Append(BuildPagedIndex(model));
+
+			sb.Append(BuildLoad(model));
+
 			if (model.IsBaseTable())
 			{
 				sb.Append(_procedureBuilder.BuildMetadata(model));
@@ -109,7 +114,10 @@ go
 				foreach (var f in table.fields)
 				{
 					if (f.Value.type == FieldType.@ref)
-						sb.Append($" [{f.Key}!{f.Value.TypeName}!RefId] = {alias}.[{f.Key}],");
+					{
+						var refTable = table.GetReferenceTable(f.Value);
+						sb.Append($" [{f.Key}!{refTable.TypeName}!RefId] = {alias}.[{f.Key}],");
+					}
 					else
 						sb.Append($" {alias}.[{f.Key}],");
 				}
@@ -202,9 +210,11 @@ as
 begin
 	set nocount on;
 	set transaction isolation level read uncommitted;
+
 	select [{table.name}!{table.TypeName}!Object] = null, {GetFields(alias, table)}
 	from [{table.Schema}].[{tableName}] {alias}
 	where {alias}.Id = @Id;
+	{GetReferencedMap(table)}
 end
 go");
 			return sb.ToString();
@@ -220,6 +230,43 @@ begin
 end
 go
 ";
+		}
+
+		public String GetReferencedMap(ITable table)
+		{
+			if (table.fields == null)
+				return null;
+			var sb = new StringBuilder();
+			Dictionary<String, Tuple<ITable, List<String>>> refs = new Dictionary<String, Tuple<ITable, List<String>>>();
+			foreach (var f in table.fields.Where(f => f.Value.type == FieldType.@ref))
+			{
+				var refTable = table.GetReferenceTable(f.Value);
+				var fieldName = f.Value.name;
+				if (refs.ContainsKey(refTable.TypeName))
+					refs[refTable.TypeName].Item2.Add(fieldName);
+				else
+				refs.Add(refTable.TypeName, Tuple.Create(refTable, new List<string>() { fieldName}));
+			}
+			foreach (var r in refs) { 
+				if (sb.Length != 0)
+					sb.AppendLine();
+				sb.AppendLine(BuildReferenceMap(table, r.Value.Item1, r.Value.Item2));
+			}
+			return sb.ToString();
+		}
+
+		public String BuildReferenceMap(ITable baseTable, ITable refTable, IEnumerable<String> links)
+		{
+			var refAlias = refTable.Alias;
+			var baseAlias = baseTable.Alias;
+			if (refAlias == baseAlias)
+				baseAlias += "_1";
+			var strLinks = String.Join(", ", links.Select(s => $"{baseAlias}.{s}"));
+			return
+$@"	
+	select [!{refTable.TypeName}!Map] = null, {GetFields(refAlias, refTable)}
+	from [{refTable.Schema}].[{refTable.TableName}] {refAlias}
+		inner join [{baseTable.Schema}].[{baseTable.TableName}] {baseAlias} on {refAlias}.[Id] in ({strLinks})";
 		}
 
 		public String BuildTable(ITable table)

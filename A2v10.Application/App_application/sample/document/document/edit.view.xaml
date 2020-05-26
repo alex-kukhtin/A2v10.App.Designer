@@ -12,10 +12,29 @@
   <Grid Columns="30rem">
     <DatePicker Label="Date" Value="{Bind Document.Date}" />
     <TextBox Label="Sum" Value="{Bind Document.Sum, DataType=Currency}" Align="Right" />
-    <Selector Label="Customer" Value="{Bind Document.Customer}">
+    <Selector Label="Customer" Value="{Bind Document.Customer}" DisplayProperty="Name" Delegate="fetchCustomer">
       <Selector.AddOns>
         <Hyperlink Icon="Search" Command="{BindCmd Dialog, Action=Browse, Argument={Bind Document.Customer}, Url='/catalog/customer/browse'}" />
       </Selector.AddOns>
     </Selector>
+    <TextBox Label="Memo" Value="{Bind Document.Memo}" />
   </Grid>
+  <Block>
+    <Toolbar>
+      <Button Icon="Add" Content="Додати рядок" Command="{BindCmd Append, Argument={Bind Document.Rows}}" />
+    </Toolbar>
+    <Table ItemsSource="{Bind Document.Rows}">
+      <TableRow>
+        <Selector Label="Product" Value="{Bind Product}" DisplayProperty="" Delegate="fetchProduct">
+          <Selector.AddOns>
+            <Hyperlink Icon="Search" Command="{BindCmd Dialog, Action=Browse, Argument={Bind Product}, Url='/catalog/product/browse'}" />
+          </Selector.AddOns>
+        </Selector>
+        <TextBox Label="Qty" Value="{Bind Qty, DataType=Number}" Align="Right" />
+        <TextBox Label="Price" Value="{Bind Price, DataType=Currency}" Align="Right" />
+        <TextBox Label="Sum" Value="{Bind Sum, DataType=Currency}" Align="Right" />
+        <TextBox Label="Memo" Value="{Bind Memo}" />
+      </TableRow>
+    </Table>
+  </Block>
 </Page>

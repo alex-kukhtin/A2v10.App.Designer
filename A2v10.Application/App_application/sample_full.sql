@@ -322,9 +322,11 @@ as
 begin
 	set nocount on;
 	set transaction isolation level read uncommitted;
+
 	select [Agent!TAgent!Object] = null, [Id!!Id] = a.Id, a.[Kind], a.[Name], a.[Code], a.[FullName], a.[Memo]
 	from [sample].[Agents] a
 	where a.Id = @Id;
+	
 end
 go
 -------------------------------------
@@ -449,9 +451,11 @@ as
 begin
 	set nocount on;
 	set transaction isolation level read uncommitted;
+
 	select [Unit!TUnit!Object] = null, [Id!!Id] = u.Id, u.[Short], u.[Name], u.[Memo]
 	from [sample].[Units] u
 	where u.Id = @Id;
+	
 end
 go
 -------------------------------------
@@ -576,9 +580,11 @@ as
 begin
 	set nocount on;
 	set transaction isolation level read uncommitted;
+
 	select [Product!TProduct!Object] = null, [Id!!Id] = p.Id, p.[Name], p.[Article], p.[FullName], p.[Memo]
 	from [sample].[Products] p
 	where p.Id = @Id;
+	
 end
 go
 -------------------------------------
@@ -688,9 +694,11 @@ as
 begin
 	set nocount on;
 	set transaction isolation level read uncommitted;
+
 	select [Warehouse!TWarehouse!Object] = null, [Id!!Id] = w.Id
 	from [sample].[Warehouses] w
 	where w.Id = @Id;
+	
 end
 go
 -------------------------------------
@@ -747,7 +755,7 @@ begin
 	offset @Offset rows fetch next @PageSize rows only
 	option (recompile);
 
-	select [Documents!TDocument!Array] = null, [Id!!Id] = d.Id, d.[Kind], d.[Date], d.[Sum], [Customer!TCustomer!RefId] = d.[Customer], d.[Memo],
+	select [Documents!TDocument!Array] = null, [Id!!Id] = d.Id, d.[Kind], d.[Date], d.[Sum], [Customer!TAgent!RefId] = d.[Customer], d.[Memo],
 		[!!RowCount] = t._rows
 	from [sample].[Documents] d inner join @paged t on t._id = d.Id
 	order by t._no;
@@ -768,9 +776,15 @@ as
 begin
 	set nocount on;
 	set transaction isolation level read uncommitted;
-	select [Document!TDocument!Object] = null, [Id!!Id] = d.Id, d.[Kind], d.[Date], d.[Sum], [Customer!TCustomer!RefId] = d.[Customer], d.[Memo]
+
+	select [Document!TDocument!Object] = null, [Id!!Id] = d.Id, d.[Kind], d.[Date], d.[Sum], [Customer!TAgent!RefId] = d.[Customer], d.[Memo]
 	from [sample].[Documents] d
 	where d.Id = @Id;
+		
+	select [!TAgent!Map] = null, [Id!!Id] = a.Id, a.[Kind], a.[Name], a.[Code], a.[FullName], a.[Memo]
+	from [sample].[Agents] a
+		inner join [sample].[Documents] d on a.[Id] in (d.Customer)
+
 end
 go
 -------------------------------------

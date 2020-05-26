@@ -13,6 +13,15 @@ namespace A2v10.App.Builder
 		editPage,
 	}
 
+	public enum TableKind
+	{
+		field,
+		catalog,
+		document,
+		journal,
+		details
+	}
+
 	public interface ITable
 	{
 		String name { get; }
@@ -24,12 +33,18 @@ namespace A2v10.App.Builder
 
 		List<Feature> features { get; set; }
 
+		String TableName { get; }
 		String TypeName { get; }
 		String Schema { get; }
 		String Plural { get; }
+		String Alias { get; }
+		String NameField { get; }
+		TableKind Kind { get; }
 
 		ITable GetParentTable();
 		ITable GetBaseTable();
+		ITable GetReferenceTable(Field field);
+		IEnumerable<Field> AllFields(Func<Field, Boolean> predicate);
 
 		Boolean HasFeature(Feature feature);
 		Boolean IsBaseTable();

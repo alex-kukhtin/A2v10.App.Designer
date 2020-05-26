@@ -1,6 +1,8 @@
 ﻿
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Microsoft.VisualBasic;
 using Newtonsoft.Json;
 
 namespace A2v10.App.Builder
@@ -33,21 +35,33 @@ namespace A2v10.App.Builder
 		}
 
 
+		public String Alias => name[0].ToString().ToLowerInvariant();
+		public String TableName => Plural;
+		public String NameField => fields?.Where(f => f.Value.isName)?.Select(f => f.Value.name)?.FirstOrDefault();
+
 		public ITable GetBaseTable()
 		{
 			return extends == null ? this : _solution.FindTable(extends);
 		}
 
-		public override void SetParent(Solution solution, string name)
+		public ITable GetReferenceTable(Field field)
 		{
-			base.SetParent(solution, name);
+			if (field.type != FieldType.@ref)
+				return null;
+			return field.reference != null ? _solution.FindTable(field.reference) : null;
+		}
+
+
+		public override void SetParent(Solution solution, String name, TableKind kind)
+		{
+			base.SetParent(solution, name, kind);
 			if (fields != null)
 				foreach (var f in fields)
-					f.Value.SetParent(solution, f.Key);
+					f.Value.SetParent(solution, f.Key, TableKind.field);
 			if (details != null)
 				foreach (var d in details)
 				{
-					d.Value.SetParent(solution, d.Key);
+					d.Value.SetParent(solution, d.Key, TableKind.details);
 					d.Value._parentTable = this;
 				}
 		}
@@ -60,6 +74,28 @@ namespace A2v10.App.Builder
 		public Boolean IsBaseTable()
 		{
 			return String.IsNullOrEmpty(extends);
+		}
+
+		public IEnumerable<Field> AllFields(Func<Field, Boolean> predicate)
+		{
+			return AllFieldsImpl(this, predicate);
+		}
+
+		private IEnumerable<Field> AllFieldsImpl(ITable table, Func<Field, Boolean> predicate)
+		{
+			if (table.fields == null)
+				yield break;
+			foreach (var f in table.fields.Values)
+			{
+				if (predicate(f))
+					yield return f;
+			}
+
+			if (table.details != null) { 
+				foreach (var d in table.details.Values)
+					foreach (var f1 in AllFieldsImpl(d, predicate))
+						yield return f1;
+			}
 		}
 	}
 }

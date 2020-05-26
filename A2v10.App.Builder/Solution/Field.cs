@@ -26,6 +26,9 @@ namespace A2v10.App.Builder
 
 		public Boolean required { get; set; }
 
+		[JsonProperty("name")]
+		public Boolean isName { get; set; }
+
 		[JsonProperty("ref")]
 		public String reference { get; set; }
 

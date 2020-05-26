@@ -1,14 +1,12 @@
 ﻿
 
-5. Document.Index procedure
-6. Document.Edit xaml
 7. Index page. Filter textbox
 8. Index load/page. Linked tables (Products/Units)
 10. solution. appName (now 'sample')
 11. Xaml. NameFactory => BuildName(String uiName, String name) ???
 12. Generate only needed files
-13. A2v10. First Click => order => toLowerCase()
-14. Document.Update = некрасивая запятая
 15. Document.Update. Обновление строк.
-16. Document.Metadata. Нету строк.
+16. SQL. Document.Index -> RefMap
+17. Document.Load - Rows
+18. Delegates for 
 

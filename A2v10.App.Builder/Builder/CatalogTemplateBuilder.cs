@@ -1,7 +1,9 @@
-﻿
+﻿/* Copyright © 2019-2020 Alex Kukhtin. All rights reserved. */
+
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 /*
@@ -34,6 +36,7 @@ namespace A2v10.App.Builder
 
 		String BuildEditTemplate(ITable table)
 		{
+			var refs = CreateDelegates(null, table);
 			return
 @"
 const template: Template = {
@@ -83,8 +86,12 @@ export default template;
 			return String.Empty;
 		}
 
-		String CreateDelegates(StringBuilder sb, ITable catalog)
+		String CreateDelegates(StringBuilder sb, ITable table)
 		{
+			foreach (var f in table.AllFields(f => f.type == FieldType.@ref))
+			{
+				Console.WriteLine(f.name);
+			}
 			return String.Empty;
 		}
 	}

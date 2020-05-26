@@ -1,7 +1,9 @@
-﻿using Newtonsoft.Json;
+﻿/* Copyright © 2019-2020 Alex Kukhtin. All rights reserved. */
+
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace A2v10.App.Builder
 {

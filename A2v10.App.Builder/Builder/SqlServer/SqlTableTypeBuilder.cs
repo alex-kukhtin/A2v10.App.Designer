@@ -1,5 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿/* Copyright © 2019-2020 Alex Kukhtin. All rights reserved. */
+
+using System;
 using System.Text;
 
 namespace A2v10.App.Builder.SqlServer
@@ -35,9 +36,8 @@ go
 			if (pt != null)
 			{
 				sb.AppendLine()
-					.Append($"\tParentId bigint,");
-				sb.AppendLine()
-					.Append("\tRowNumber int,");
+				.AppendLine($"\tParentId bigint,")
+				.Append("\tRowNumber int,");
 			}
 			foreach (var f in table.fields)
 			{
