@@ -2,16 +2,16 @@
 ------------------------------------------------
 Copyright © 2008-2020 Alex Kukhtin
 
-Last updated : 25 jul 2020
-module version : 7171
+Last updated : 31 may 2020
+module version : 7664
 */
 ------------------------------------------------
 begin
 	set nocount on;
 	if not exists(select * from a2sys.Versions where Module = N'std:admin')
-		insert into a2sys.Versions (Module, [Version]) values (N'std:admin', 7171);
+		insert into a2sys.Versions (Module, [Version]) values (N'std:admin', 7170);
 	else
-		update a2sys.Versions set [Version] = 7171 where Module = N'std:admin';
+		update a2sys.Versions set [Version] = 7170 where Module = N'std:admin';
 end
 go
 ------------------------------------------------
@@ -154,7 +154,7 @@ begin
 
 	select [User!TUser!Object]=null, 
 		[Id!!Id]=u.Id, [Name!!Name]=u.UserName, [Phone!!Phone]=u.PhoneNumber, [Email]=u.Email,
-		[PersonName] = u.PersonName, Memo = u.Memo, IsAdmin,
+		[PersonName] = u.PersonName, Memo = u.Memo,
 		[Groups!TGroup!Array] = null,
 		[Roles!TRole!Array] = null
 	from a2security.ViewUsers u
@@ -505,18 +505,9 @@ begin
 	set xact_abort on;
 
 	exec a2admin.[Ensure.Admin]  @TenantId, @UserId;
-	if @Id < 100
-	begin
-		raiserror(N'UI:Can''t delete system group', 16, -1) with nowait;
-	end
-	else 
-	begin
-		begin tran
-			delete from a2security.UserGroups where GroupId = @Id;
-			delete from a2security.UserRoles where GroupId = @Id;
-			update a2security.Groups set Void=1, [Key] = null where Id=@Id;
-		commit tran;
-	end
+	delete from a2security.UserGroups where GroupId = @Id;
+	delete from a2security.UserRoles where GroupId = @Id;
+	update a2security.Groups set Void=1, [Key] = null where Id=@Id;
 end
 go
 ------------------------------------------------
@@ -669,18 +660,9 @@ begin
 	set transaction isolation level read committed;
 	set xact_abort on;
 
-	if @Id < 100
-	begin
-		raiserror(N'UI:Can''t delete system role', 16, -1) with nowait;
-	end
-	else
-	begin
-		begin tran;
-		exec a2admin.[Ensure.Admin]  @TenantId, @UserId;
-		delete from a2security.UserRoles where RoleId = @Id;
-		update a2security.Roles set Void=1, [Key] = null where Id=@Id;
-		commit tran;
-	end
+	exec a2admin.[Ensure.Admin]  @TenantId, @UserId;
+	delete from a2security.UserRoles where RoleId = @Id;
+	update a2security.Roles set Void=1, [Key] = null where Id=@Id;
 end
 go
 ------------------------------------------------

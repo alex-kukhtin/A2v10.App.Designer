@@ -34,9 +34,7 @@ namespace A2v10.App.Builder.Xaml
 			yield return new XElement(ns + "DataGridColumn",
 				new XAttribute("Header", "Код"),
 				new XAttribute("Content", "{Bind Id}"),
-				new XAttribute("Align", "Right"),
-				new XAttribute("Wrap", "NoWrap"),
-				new XAttribute("Fit", "True")
+				new XAttribute("Role", "Id")
 			);
 
 			if (table.fields == null)
@@ -60,16 +58,19 @@ namespace A2v10.App.Builder.Xaml
 				case FieldType.date:
 					col.Add(
 						new XAttribute("Content", $"{{Bind {f.name}, DataType=Date}}"),
-						new XAttribute("Fit", "True"),
-						new XAttribute("Wrap", "NoWrap")
+						new XAttribute("Role", "Date")
 					);
 					break;
 				case FieldType.money:
 					col.Add(
 						new XAttribute("Content", $"{{Bind {f.name}, DataType=Currency}}"),
-						new XAttribute("Fit", "True"),
-						new XAttribute("Align", "Right"),
-						new XAttribute("Wrap", "NoWrap")
+						new XAttribute("Role", "Number")
+					);
+					break;
+				case FieldType.@ref:
+					var refTable = table.GetReferenceTable(f);
+					col.Add(
+						new XAttribute("Content", $"{{Bind {f.name}.{refTable.NameField}}}")
 					);
 					break;
 				default:

@@ -1,6 +1,6 @@
 ﻿{
 	"$schema": "http://json-schema.org/draft-04/schema",
-	"$version": "10.0.7646",
+	"$version": "10.0.7696",
 	"title": "JSON Schema for model.json",
 	"type": "object",
 
@@ -34,6 +34,19 @@
 								"schema": { "type": "string" }
 							},
 							"additionalProperties": false
+						},
+						"events": {
+							"type": "object",
+							"properties": {
+								"afterSave": {
+									"type": "object",
+									"properties": {
+										"source": { "type": "string" },
+										"schema": { "type": "string" },
+										"model": { "type": "string" }
+									}
+								}
+							}
 						},
 						"export": {
 							"type": "object",
@@ -85,6 +98,7 @@
 							},
 							"additionalProperties": false
 						},
+						"twoPhase": { "type": "boolean" },
 						"parameters": { "type": "object" }
 					},
 					"additionalProperties": false
@@ -115,7 +129,7 @@
 					"properties": {
 						"type": {
 							"type": "string",
-							"enum": [ "sql", "clr", "script", "xml", "startProcess", "resumeProcess", "callApi", "file" ]
+							"enum": [ "sql", "clr", "script", "xml", "startProcess", "resumeProcess", "callApi", "file", "sendMessage", "javascript" ]
 						},
 						"schema": { "type": "string" },
 						"source": { "type": "string" },
@@ -138,7 +152,8 @@
 						"authorize": { "type": "boolean" },
 						"allowOrigin": { "type": "string" },
 						"errorCode": { "type": "number" },
-						"parameters": { "type": "object" }
+						"parameters": { "type": "object" },
+						"file": { "type": "string" }
 					},
 					"additionalProperties": false
 				}
@@ -176,12 +191,27 @@
 						},
 						"parse": {
 							"type": "string",
-							"enum": [ "excel" ]
+							"enum": [ "excel", "xlsx", "csv", "dbf", "xml", "auto" ]
 						},
 						"async": { "type": "boolean" },
 						"clrType": {
 							"type": "string",
 							"pattern": "^\\s*clr-type\\s*:\\s*([\\w\\.]+)\\s*;\\s*assembly\\s*=\\s*([\\w\\.]+)\\s*$"
+						},
+						"availableModels": {
+							"type": "array",
+							"items": {
+								"type": "object",
+								"properties": {
+									"name": { "type": "string" },
+									"columns": { "type": "string" },
+									"source": { "type": "string" },
+									"schema": { "type": "string" },
+									"model": { "type": "string" },
+									"parameters": {"type": "object"}
+								},
+								"additionalProperties": false
+							}
 						}
 					},
 					"additionalProperties": false

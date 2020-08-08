@@ -2,7 +2,7 @@
 
 namespace A2v10.App.Builder
 {
-	internal class JsonConvertAttribute : Attribute
+	internal sealed class JsonConvertAttribute : Attribute
 	{
 	}
 }

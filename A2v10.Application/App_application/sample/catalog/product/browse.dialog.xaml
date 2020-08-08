@@ -4,7 +4,7 @@
     <Button Content="Закрити" Command="{BindCmd Close}" />
   </Dialog.Buttons>
   <DataGrid ItemsSource="{Bind Products}" GridLines="Horizontal" Hover="True" Striped="True" FixedHeader="True" Style="Light" Sort="True">
-    <DataGridColumn Header="Код" Content="{Bind Id}" Align="Right" Wrap="NoWrap" Fit="True" />
+    <DataGridColumn Header="Код" Content="{Bind Id}" Role="Id" />
     <DataGridColumn Header="Name" Content="{Bind Name}" />
     <DataGridColumn Header="Артикул" Content="{Bind Article}" />
     <DataGridColumn Header="FullName" Content="{Bind FullName}" />

@@ -14,10 +14,10 @@
     <Pager Source="{Bind Parent.Pager}" Style="Rounded" />
   </Page.Pager>
   <DataGrid ItemsSource="{Bind Parent.ItemsSource}" GridLines="Horizontal" Hover="True" Striped="True" FixedHeader="True" Style="Light" Sort="True">
-    <DataGridColumn Header="Код" Content="{Bind Id}" Align="Right" Wrap="NoWrap" Fit="True" />
-    <DataGridColumn Header="Date" Content="{Bind Date, DataType=Date}" Fit="True" Wrap="NoWrap" />
-    <DataGridColumn Header="Sum" Content="{Bind Sum, DataType=Currency}" Fit="True" Align="Right" Wrap="NoWrap" />
-    <DataGridColumn Header="Customer" Content="{Bind Customer}" />
+    <DataGridColumn Header="Код" Content="{Bind Id}" Role="Id" />
+    <DataGridColumn Header="Date" Content="{Bind Date, DataType=Date}" Role="Date" />
+    <DataGridColumn Header="Sum" Content="{Bind Sum, DataType=Currency}" Role="Number" />
+    <DataGridColumn Header="Customer" Content="{Bind Customer.Name}" />
     <DataGridColumn Header="Memo" Content="{Bind Memo}" />
   </DataGrid>
 </Page>

@@ -1,4 +1,5 @@
-﻿
+﻿/* Copyright © 2019-2020 Alex Kukhtin. All rights reserved. */
+
 using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -10,7 +11,7 @@ namespace A2v10.App.Builder
 		@string,
 		@char,
 		date,
-		dateTime,
+		datetime,
 		money,
 		@float,
 		@ref
@@ -33,24 +34,17 @@ namespace A2v10.App.Builder
 		public String reference { get; set; }
 
 		public String SqlType() {
-			switch (type)
+			return type switch
 			{
-				case FieldType.@string:
-					return $"nvarchar({GetLen()})";
-				case FieldType.@char:
-					return $"nchar({GetLen()})";
-				case FieldType.date:
-					return $"date";
-				case FieldType.dateTime:
-					return $"datetime";
-				case FieldType.@ref:
-					return "bigint";
-				case FieldType.money:
-					return $"money";
-				case FieldType.@float:
-					return $"float";
-			}
-			throw new NotImplementedException(type.ToString());
+				FieldType.@string => $"nvarchar({GetLen()})",
+				FieldType.@char => $"nchar({GetLen()})",
+				FieldType.date => $"date",
+				FieldType.datetime => $"datetime",
+				FieldType.@ref => "bigint",
+				FieldType.money => $"money",
+				FieldType.@float => $"float",
+				_ => throw new NotImplementedException(type.ToString()),
+			};
 		}
 
 		String SqlNull()
@@ -97,7 +91,7 @@ namespace A2v10.App.Builder
 		#region IField
 		public String GetLabel()
 		{
-			return uiName != null ? uiName : name;
+			return uiName ?? name;
 		}
 		#endregion
 	}

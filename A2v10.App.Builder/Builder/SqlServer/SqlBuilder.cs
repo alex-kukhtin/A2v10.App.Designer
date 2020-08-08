@@ -84,12 +84,12 @@ sb.AppendLine(
 ");
 		
 sb.AppendLine(
-@$"	select [{propName}!{table.TypeName}!Array] = null, {GetFields(alias, table)},
+@$"	select [{propName}!{table.TypeName}!Array] = null, {GetFields(alias, table, false)},
 		[!!RowCount] = t._rows
 	from [{table.Schema}].[{tableName}] {alias} inner join @paged t on t._id = {alias}.Id
 	order by t._no;
 ");
-
+			sb.Append(GetReferencedMapIndex(table));
 // system recordset
 sb.Append(
 @$"
@@ -105,21 +105,28 @@ go
 		}
 
 
-		String GetFields(String alias, ITable table)
+		String GetFields(String alias, ITable table, Boolean withDetails)
 		{
 			var sb = new StringBuilder();
 			sb.Append($"[Id!!Id] = {alias}.Id,");
 			if (table.fields != null)
 			{
-				foreach (var f in table.fields)
+				foreach (var (k, v) in table.fields)
 				{
-					if (f.Value.type == FieldType.@ref)
+					if (v.type == FieldType.@ref)
 					{
-						var refTable = table.GetReferenceTable(f.Value);
-						sb.Append($" [{f.Key}!{refTable.TypeName}!RefId] = {alias}.[{f.Key}],");
+						var refTable = table.GetReferenceTable(v);
+						sb.Append($" [{k}!{refTable.TypeName}!RefId] = {alias}.[{k}],");
 					}
 					else
-						sb.Append($" {alias}.[{f.Key}],");
+						sb.Append($" {alias}.[{k}],");
+				}
+			}
+			if (withDetails && table.details != null)
+			{
+				foreach (var (_, t) in table.details)
+				{
+					sb.Append($"[{t.TableName}!{t.TypeName}!Array] = null,");
 				}
 			}
 			return sb.RemoveLastComma().ToString();
@@ -146,7 +153,7 @@ go
 			var sb = new StringBuilder();
 			foreach (var f in fields)
 			{
-				sb.Append($" or upper({alias}.{f.Key}) like @Fragment");
+				sb.Append($" or upper({alias}.[{f.Key}]) like @Fragment");
 			}
 			return sb.ToString();
 		}
@@ -194,6 +201,23 @@ go
 			return sb.ToString();
 		}
 
+		public String BuildLoadDetails(ITable model, ITable parent)
+		{
+			ITable table = model.GetBaseTable();
+			var alias = table.name[0].ToString().ToLowerInvariant();
+			var tableName = table.Plural;
+			var sb = new StringBuilder();
+			sb.AppendLine(
+@$"
+	select [!{table.TypeName}!Array] = null, {GetFields(alias, table, false)}, [!{parent.TypeName}.{tableName}!ParentId]=[{parent.name}], [RowNo!!RowNumber] = RowNo
+	from [{table.Schema}].[{tableName}] {alias}
+	where {alias}.[{parent.name}] = @Id;
+
+	{GetReferencedMap(table, parent)}"
+);
+			return sb.ToString();
+		}
+
 		public String BuildLoad(ITable model)
 		{
 			ITable table = model.GetBaseTable();
@@ -211,9 +235,10 @@ begin
 	set nocount on;
 	set transaction isolation level read uncommitted;
 
-	select [{table.name}!{table.TypeName}!Object] = null, {GetFields(alias, table)}
+	select [{table.name}!{table.TypeName}!Object] = null, {GetFields(alias, table, true)}
 	from [{table.Schema}].[{tableName}] {alias}
 	where {alias}.Id = @Id;
+	{GetDetailsMap(table)}
 	{GetReferencedMap(table)}
 end
 go");
@@ -232,7 +257,43 @@ go
 ";
 		}
 
-		public String GetReferencedMap(ITable table)
+		public String GetDetailsMap(ITable table)
+		{
+			if (table.details == null)
+				return null;
+			var sb = new StringBuilder();
+			foreach (var (_, t) in table.details)
+			{
+				sb.Append(BuildLoadDetails(t, table));
+			}
+			return sb.ToString();
+		}
+
+		public String GetReferencedMapIndex(ITable table)
+		{
+			if (table.fields == null)
+				return null;
+			var sb = new StringBuilder();
+			Dictionary<String, Tuple<ITable, List<String>>> refs = new Dictionary<String, Tuple<ITable, List<String>>>();
+			foreach (var f in table.fields.Where(f => f.Value.type == FieldType.@ref))
+			{
+				var refTable = table.GetReferenceTable(f.Value);
+				var fieldName = f.Value.name;
+				if (refs.ContainsKey(refTable.TypeName))
+					refs[refTable.TypeName].Item2.Add(fieldName);
+				else
+					refs.Add(refTable.TypeName, Tuple.Create(refTable, new List<string>() { fieldName }));
+			}
+			foreach (var r in refs)
+			{
+				if (sb.Length != 0)
+					sb.AppendLine();
+				sb.Append(BuildReferenceMapIndex(table, r.Value.Item1, r.Value.Item2));
+			}
+			return sb.ToString();
+		}
+
+		public String GetReferencedMap(ITable table, ITable parent = null)
 		{
 			if (table.fields == null)
 				return null;
@@ -250,23 +311,49 @@ go
 			foreach (var r in refs) { 
 				if (sb.Length != 0)
 					sb.AppendLine();
-				sb.AppendLine(BuildReferenceMap(table, r.Value.Item1, r.Value.Item2));
+				sb.Append(BuildReferenceMap(table, r.Value.Item1, r.Value.Item2, parent));
 			}
 			return sb.ToString();
 		}
 
-		public String BuildReferenceMap(ITable baseTable, ITable refTable, IEnumerable<String> links)
+		public String BuildReferenceMap(ITable baseTable, ITable refTable, IEnumerable<String> links, ITable parent = null)
 		{
 			var refAlias = refTable.Alias;
 			var baseAlias = baseTable.Alias;
 			if (refAlias == baseAlias)
 				baseAlias += "_1";
 			var strLinks = String.Join(", ", links.Select(s => $"{baseAlias}.{s}"));
+
+			String whereParent = null;
+			if (parent != null)
+			{
+				whereParent = @$"
+	where {baseAlias}.[{parent.name}] = @Id";
+			} else
+			{
+				whereParent = $@"
+	where {baseAlias}.[Id] = @Id";
+			}
 			return
-$@"	
-	select [!{refTable.TypeName}!Map] = null, {GetFields(refAlias, refTable)}
+$@"select [!{refTable.TypeName}!Map] = null, {GetFields(refAlias, refTable, false)}
 	from [{refTable.Schema}].[{refTable.TableName}] {refAlias}
-		inner join [{baseTable.Schema}].[{baseTable.TableName}] {baseAlias} on {refAlias}.[Id] in ({strLinks})";
+		inner join [{baseTable.Schema}].[{baseTable.TableName}] {baseAlias} on {refAlias}.[Id] in ({strLinks}){whereParent};";
+		}
+
+		public String BuildReferenceMapIndex(ITable baseTable, ITable refTable, IEnumerable<String> links)
+		{
+			var refAlias = refTable.Alias;
+			var baseAlias = baseTable.Alias;
+			if (refAlias == baseAlias)
+				baseAlias += "_1";
+			var strLinks = String.Join(", ", links.Select(s => $"{baseAlias}.{s}"));
+
+			return
+$@"	select [!{refTable.TypeName}!Map] = null, {GetFields(refAlias, refTable, false)}
+	from @paged 
+		inner join [{baseTable.Schema}].[{baseTable.TableName}] {baseAlias} on _id = {baseAlias}.[Id]
+		inner join [{refTable.Schema}].[{refTable.TableName}] {refAlias} on {refAlias}.[Id] in ({strLinks});
+";
 		}
 
 		public String BuildTable(ITable table)

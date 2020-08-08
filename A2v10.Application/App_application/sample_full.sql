@@ -269,7 +269,7 @@ begin
 	from 
 		[sample].[Agents] a
 	where 
-		a.Kind = @Kind and (@Fragment is null or upper(a.Name) like @Fragment or upper(a.Code) like @Fragment or upper(a.FullName) like @Fragment or upper(a.Memo) like @Fragment)
+		a.Kind = @Kind and (@Fragment is null or upper(a.[Name]) like @Fragment or upper(a.[Code]) like @Fragment or upper(a.[FullName]) like @Fragment or upper(a.[Memo]) like @Fragment)
 	order by 
 	case when @Dir=N'asc' then
 		case @Order
@@ -327,6 +327,7 @@ begin
 	from [sample].[Agents] a
 	where a.Id = @Id;
 	
+	
 end
 go
 -------------------------------------
@@ -366,9 +367,8 @@ begin
 	when not matched by target then 
 	insert ([Kind], [Name], [Code], [FullName], [Memo])
 	values (@Kind, [Name], [Code], [FullName], [Memo])
-
 	output $action, inserted.Id into @output(op, id);
-	
+
 	select top(1) @RetId = id from @output;
 
 	execute [sample].[Agent.Load] @UserId = @UserId, @Id = @RetId;
@@ -401,7 +401,7 @@ begin
 	from 
 		[sample].[Units] u
 	where 
-		(@Fragment is null or upper(u.Short) like @Fragment or upper(u.Name) like @Fragment or upper(u.Memo) like @Fragment)
+		(@Fragment is null or upper(u.[Short]) like @Fragment or upper(u.[Name]) like @Fragment or upper(u.[Memo]) like @Fragment)
 	order by 
 	case when @Dir=N'asc' then
 		case @Order
@@ -456,6 +456,7 @@ begin
 	from [sample].[Units] u
 	where u.Id = @Id;
 	
+	
 end
 go
 -------------------------------------
@@ -493,9 +494,8 @@ begin
 	when not matched by target then 
 	insert ([Short], [Name], [Memo])
 	values ([Short], [Name], [Memo])
-
 	output $action, inserted.Id into @output(op, id);
-	
+
 	select top(1) @RetId = id from @output;
 
 	execute [sample].[Unit.Load] @UserId = @UserId, @Id = @RetId;
@@ -528,7 +528,7 @@ begin
 	from 
 		[sample].[Products] p
 	where 
-		(@Fragment is null or upper(p.Name) like @Fragment or upper(p.Article) like @Fragment or upper(p.FullName) like @Fragment or upper(p.Memo) like @Fragment)
+		(@Fragment is null or upper(p.[Name]) like @Fragment or upper(p.[Article]) like @Fragment or upper(p.[FullName]) like @Fragment or upper(p.[Memo]) like @Fragment)
 	order by 
 	case when @Dir=N'asc' then
 		case @Order
@@ -585,6 +585,7 @@ begin
 	from [sample].[Products] p
 	where p.Id = @Id;
 	
+	
 end
 go
 -------------------------------------
@@ -623,9 +624,8 @@ begin
 	when not matched by target then 
 	insert ([Name], [Article], [FullName], [Memo])
 	values ([Name], [Article], [FullName], [Memo])
-
 	output $action, inserted.Id into @output(op, id);
-	
+
 	select top(1) @RetId = id from @output;
 
 	execute [sample].[Product.Load] @UserId = @UserId, @Id = @RetId;
@@ -699,6 +699,7 @@ begin
 	from [sample].[Warehouses] w
 	where w.Id = @Id;
 	
+	
 end
 go
 -------------------------------------
@@ -729,7 +730,7 @@ begin
 	from 
 		[sample].[Documents] d
 	where 
-		d.Kind = @Kind and (@Fragment is null or upper(d.Date) like @Fragment or upper(d.Sum) like @Fragment or upper(d.Customer) like @Fragment or upper(d.Memo) like @Fragment)
+		d.Kind = @Kind and (@Fragment is null or upper(d.[Date]) like @Fragment or upper(d.[Sum]) like @Fragment or upper(d.[Customer]) like @Fragment or upper(d.[Memo]) like @Fragment)
 	order by 
 	case when @Dir=N'asc' then
 		case @Order
@@ -760,6 +761,10 @@ begin
 	from [sample].[Documents] d inner join @paged t on t._id = d.Id
 	order by t._no;
 
+	select [!TAgent!Map] = null, [Id!!Id] = a.Id, a.[Kind], a.[Name], a.[Code], a.[FullName], a.[Memo]
+	from @paged 
+		inner join [sample].[Documents] d on _id = d.[Id]
+		inner join [sample].[Agents] a on a.[Id] in (d.Customer);
 
 	-- system data
 	select [!$System!] = null,  [!Documents!PageSize] = @PageSize, [!Documents!Offset] = @Offset,
@@ -777,14 +782,23 @@ begin
 	set nocount on;
 	set transaction isolation level read uncommitted;
 
-	select [Document!TDocument!Object] = null, [Id!!Id] = d.Id, d.[Kind], d.[Date], d.[Sum], [Customer!TAgent!RefId] = d.[Customer], d.[Memo]
+	select [Document!TDocument!Object] = null, [Id!!Id] = d.Id, d.[Kind], d.[Date], d.[Sum], [Customer!TAgent!RefId] = d.[Customer], d.[Memo],[Rows!TRow!Array] = null
 	from [sample].[Documents] d
 	where d.Id = @Id;
-		
+	
+	select [!TRow!Array] = null, [Id!!Id] = r.Id, [Product!TProduct!RefId] = r.[Product], r.[Qty], r.[Price], r.[Sum], r.[Memo], [!TDocument.Rows!ParentId]=[Document], [RowNo!!RowNumber] = RowNo
+	from [sample].[Rows] r
+	where r.[Document] = @Id;
+
+	select [!TProduct!Map] = null, [Id!!Id] = p.Id, p.[Name], p.[Article], p.[FullName], p.[Memo]
+	from [sample].[Products] p
+		inner join [sample].[Rows] r on p.[Id] in (r.Product)
+	where r.[Document] = @Id;
+
 	select [!TAgent!Map] = null, [Id!!Id] = a.Id, a.[Kind], a.[Name], a.[Code], a.[FullName], a.[Memo]
 	from [sample].[Agents] a
 		inner join [sample].[Documents] d on a.[Id] in (d.Customer)
-
+	where d.[Id] = @Id;
 end
 go
 -------------------------------------
@@ -827,10 +841,24 @@ begin
 	when not matched by target then 
 	insert ([Kind], [Date], [Sum], [Customer], [Memo])
 	values (@Kind, [Date], [Sum], [Customer], [Memo])
-
 	output $action, inserted.Id into @output(op, id);
-	
+
 	select top(1) @RetId = id from @output;
+
+	merge [sample].[Rows] as t
+	using @Rows as s
+	on t.[Id] = s.[Id] and t.[Document] = @RetId
+	when matched then update set 
+		t.RowNo = s.RowNumber,
+		t.[Product] = s.[Product],
+		t.[Qty] = s.[Qty],
+		t.[Price] = s.[Price],
+		t.[Sum] = s.[Sum],
+		t.[Memo] = s.[Memo]
+	when not matched by target then 
+	insert ([Document], RowNo, [Product], [Qty], [Price], [Sum], [Memo])
+	values (@RetId, RowNumber, [Product], [Qty], [Price], [Sum], [Memo])
+	when not matched by source and t.[Document] = @RetId then delete;
 
 	execute [sample].[Document.Load] @UserId = @UserId, @Id = @RetId;
 end

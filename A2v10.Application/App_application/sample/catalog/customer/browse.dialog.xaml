@@ -4,6 +4,6 @@
     <Button Content="Закрити" Command="{BindCmd Close}" />
   </Dialog.Buttons>
   <DataGrid ItemsSource="{Bind Agents}" GridLines="Horizontal" Hover="True" Striped="True" FixedHeader="True" Style="Light" Sort="True">
-    <DataGridColumn Header="Код" Content="{Bind Id}" Align="Right" Wrap="NoWrap" Fit="True" />
+    <DataGridColumn Header="Код" Content="{Bind Id}" Role="Id" />
   </DataGrid>
 </Dialog>

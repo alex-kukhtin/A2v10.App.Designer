@@ -33,7 +33,6 @@ namespace A2v10.App.Builder.Xaml
 
 		IEnumerable<XElement> CreateMainFields(ITable table)
 		{
-			XNamespace ns = XamlBuilder.XamlNamespace;
 			if (table.fields == null)
 				yield break;
 			var bt = table.GetBaseTable();

@@ -14,7 +14,7 @@
     <Pager Source="{Bind Parent.Pager}" Style="Rounded" />
   </Page.Pager>
   <DataGrid ItemsSource="{Bind Parent.ItemsSource}" GridLines="Horizontal" Hover="True" Striped="True" FixedHeader="True" Style="Light" Sort="True">
-    <DataGridColumn Header="Код" Content="{Bind Id}" Align="Right" Wrap="NoWrap" Fit="True" />
+    <DataGridColumn Header="Код" Content="{Bind Id}" Role="Id" />
     <DataGridColumn Header="Назва" Content="{Bind Name}" />
     <DataGridColumn Header="ЕДПРОУ" Content="{Bind Code}" />
     <DataGridColumn Header="Повна назва" Content="{Bind FullName}" />

@@ -126,9 +126,9 @@ app.modules['std:locale'] = function () {
 
 
 
-// Copyright © 2015-2018 Alex Kukhtin. All rights reserved.
+// Copyright © 2015-2020 Alex Kukhtin. All rights reserved.
 
-/*20181204-7382*/
+/*20200722-7691*/
 /* platform/webvue.js */
 
 (function () {
@@ -141,10 +141,15 @@ app.modules['std:locale'] = function () {
 		Vue.nextTick(func);
 	}
 
+	function print() {
+		window.print();
+	}
+
 
 	app.modules['std:platform'] = {
 		set: set,
 		defer: defer,
+		print: print,
 		File: File, /*file ctor*/
 		performance: performance
 	};
@@ -176,7 +181,7 @@ app.modules['std:const'] = function () {
 
 // Copyright © 2015-2020 Alex Kukhtin. All rights reserved.
 
-// 20200505-7564
+// 20200714-7688
 // services/utils.js
 
 app.modules['std:utils'] = function () {
@@ -422,6 +427,19 @@ app.modules['std:utils'] = function () {
 		return formatFunc(num);
 	}
 
+	function formatDateWithFormat(date, format) {
+		if (!format)
+			return formatDate(date);
+		switch (format) {
+			case 'MMMM yyyy':
+				return capitalize(date.toLocaleDateString(locale.$Locale, { month: 'long', year: 'numeric' }));
+			default:
+				console.error('invalid date format: ' + format);
+		}
+		return formatDate(date);
+	}
+
+
 	function format(obj, dataType, opts) {
 		opts = opts || {};
 		if (!dataType)
@@ -436,6 +454,8 @@ app.modules['std:utils'] = function () {
 				}
 				if (dateIsZero(obj))
 					return '';
+				if (opts.format)
+					return formatDateWithFormat(obj, opts.format);
 				return formatDate(obj) + ' ' + formatTime(obj);
 			case "Date":
 				if (isString(obj))
@@ -446,6 +466,8 @@ app.modules['std:utils'] = function () {
 				}
 				if (dateIsZero(obj))
 					return '';
+				if (opts.format)
+					return formatDateWithFormat(obj, opts.format);
 				return formatDate(obj);
 			case 'DateUrl':
 				if (dateIsZero(obj))
@@ -1328,9 +1350,9 @@ app.modules['std:period'] = function () {
 };
 
 
-// Copyright © 2015-2018 Alex Kukhtin. All rights reserved.
+// Copyright © 2015-2020 Alex Kukhtin. All rights reserved.
 
-// 20181019-7323
+// 20200725-7693
 /* services/modelinfo.js */
 
 app.modules['std:modelInfo'] = function () {
@@ -1338,10 +1360,12 @@ app.modules['std:modelInfo'] = function () {
 	return {
 		copyfromQuery: copyFromQuery,
 		get: getPagerInfo,
-		reconcile: reconcile
+		reconcile,
+		reconcileAll
 	};
 
 	function copyFromQuery(mi, q) {
+		if (!mi) return;
 		let psq = { PageSize: q.pageSize, Offset: q.offset, SortDir: q.dir, SortOrder: q.order, GroupBy: q.group };
 		for (let p in psq) {
 			mi[p] = psq[p];
@@ -1374,6 +1398,13 @@ app.modules['std:modelInfo'] = function () {
 				mi.Filter[p] = dx;
 				//console.dir(mi.Filter[p]);
 			}
+		}
+	}
+
+	function reconcileAll(m) {
+		if (!m) return;
+		for (let p in m) {
+			reconcile(m[p]);
 		}
 	}
 };
@@ -1998,7 +2029,7 @@ app.modules['std:validators'] = function () {
 
 /* Copyright © 2015-2020 Alex Kukhtin. All rights reserved.*/
 
-/*20200214-7632*/
+/*20200728-7694*/
 // services/datamodel.js
 
 (function () {
@@ -2027,6 +2058,7 @@ app.modules['std:validators'] = function () {
 	const utils = require('std:utils');
 	const log = require('std:log', true);
 	const period = require('std:period');
+	const modelInfoTool = require('std:modelInfo');
 
 	let __initialized__ = false;
 
@@ -2351,6 +2383,29 @@ app.modules['std:validators'] = function () {
 			};
 		}
 
+		function setDefaults(root) {
+			if (!root.$template || !root.$template.defaults)
+				return;
+			for (let p in root.$template.defaults) {
+				let px = p.lastIndexOf('.');
+				if (px === -1)
+					continue;
+				let path = p.substring(0, px);
+				let prop = p.substring(px + 1);
+				if (prop.endsWith('[]'))
+					continue;
+				let def = root.$template.defaults[p];
+				let obj = utils.simpleEval(root, path);
+				if (obj.$isNew) {
+					console.dir('set default');
+					if (utils.isFunction(def))
+						obj[prop] = def(obj);
+					else
+						obj[prop] = def;
+				}
+			}
+		}
+
 		let constructEvent = ctorname + '.construct';
 		let _lastCaller = null;
 		let propForConstruct = path ? propFromPath(path) : '';
@@ -2369,6 +2424,7 @@ app.modules['std:validators'] = function () {
 				}
 			}
 			elem._setModelInfo_ = setRootModelInfo;
+			elem._setRuntimeInfo_ = setRootRuntimeInfo;
 			elem._findRootModelInfo = findRootModelInfo;
 			elem._saveSelections = saveSelections;
 			elem._restoreSelections = restoreSelections;
@@ -2376,6 +2432,7 @@ app.modules['std:validators'] = function () {
 			elem._needValidate_ = false;
 			elem._modelLoad_ = (caller) => {
 				_lastCaller = caller;
+				setDefaults(elem);
 				elem._fireLoad_();
 				__initialized__ = true;
 			};
@@ -2596,13 +2653,16 @@ app.modules['std:validators'] = function () {
 		};
 
 		arr.$loadLazy = function () {
+			if (!this.$isLazy())
+				return;
 			return new Promise((resolve, reject) => {
+				if (!this.$vm) return;
 				if (this.$loaded) { resolve(this); return; }
 				if (!this.$parent) { resolve(this); return; }
 				const meta = this.$parent._meta_;
 				if (!meta.$lazy) { resolve(this); return; }
 				let prop = propFromPath(this._path_);
-				if (!meta.$lazy.indexOf(prop) === -1) { resolve(this); return; }
+				if (meta.$lazy.indexOf(prop) === -1) { resolve(this); return; }
 				this.$vm.$loadLazy(this.$parent, prop).then(() => resolve(this));
 			});
 		};
@@ -2753,6 +2813,10 @@ app.modules['std:validators'] = function () {
 				}
 			}
 			return this;
+		};
+
+		arr.$sum = function (fn) {
+			return this.reduce((a, c) => a + fn(c), 0);
 		};
 
 		arr.__fireChange__ = function (opts) {
@@ -3403,6 +3467,31 @@ app.modules['std:validators'] = function () {
 		}
 	}
 
+	function setRootRuntimeInfo(runtime) {
+		if (!runtime) return;
+		if (runtime.$cross) {
+			for (let p in this) {
+				if (p.startsWith("$") || p.startsWith('_')) continue;
+				let ta = this[p];
+				if (ta._elem_ && ta.$cross) {
+					for (let x in runtime.$cross) {
+						if (ta._elem_.name != x) continue;
+						let t = ta.$cross;
+						let s = runtime.$cross[x];
+						for (let p in t) {
+							let ta = t[p];
+							let sa = s[p];
+							if (ta && sa)
+								ta.splice(0, ta.length, ...sa);
+							else if (ta && !sa)
+								ta.splice(0, ta.length);
+						}
+					}
+				}
+			}
+		}
+	}
+
 	function setModelInfo(root, info, rawData) {
 		// may be default
 		root.__modelInfo = info ? info : {
@@ -3410,6 +3499,7 @@ app.modules['std:validators'] = function () {
 		};
 		let mi = rawData.$ModelInfo;
 		if (!mi) return;
+		modelInfoTool.reconcileAll(mi);
 		for (let p in mi) {
 			root[p].$ModelInfo = checkPeriod(mi[p]);
 		}
@@ -3942,7 +4032,7 @@ app.modules['std:tools'] = function () {
 
 // Copyright © 2015-2020 Alex Kukhtin. All rights reserved.
 
-// 20200322-7643
+// 20200713-7685
 /* services/html.js */
 
 app.modules['std:html'] = function () {
@@ -3974,10 +4064,10 @@ app.modules['std:html'] = function () {
 		body.style.display = "none";
 	}
 
-	function getRowHeight(elem) {
+	function getRowHeight(elem, padding) {
 		let rows = elem.getElementsByTagName('tr');
 		for (let r = 0; r < rows.length; r++) {
-			let h = rows[r].offsetHeight - 12; /* padding !!!*/
+			let h = rows[r].offsetHeight - (padding || 12); /* padding from css */
 			rows[r].setAttribute('data-row-height', h);
 		}
 	}
@@ -4817,9 +4907,9 @@ Vue.component('validator-control', {
 	});
 
 })();
-// Copyright © 2015-2019 Alex Kukhtin. All rights reserved.
+// Copyright © 2015-2020 Alex Kukhtin. All rights reserved.
 
-/*20191115-7578*/
+/*20200618-7674*/
 /*components/combobox.js*/
 
 (function () {
@@ -4831,7 +4921,7 @@ Vue.component('validator-control', {
 `<div :class="cssClass()" v-lazy="itemsSource" :test-id="testId">
 	<label v-if="hasLabel"><span v-text="label"/><slot name="hint"/><slot name="link"></slot></label>
 	<div class="input-group">
-		<div class="select-wrapper">
+		<div class="select-wrapper" :disabled="disabled" >
 			<div v-text="getWrapText()" class="select-text" ref="wrap" :class="wrapClass"/>
 			<span class="caret"/>
 		</div>
@@ -5282,7 +5372,7 @@ Vue.component('validator-control', {
 		template: `
 <div @click.stop.prevent="dummy" class="time-picker-pane calendar-pane">
 <table class="table-hours">
-<thead><tr><th colspan="6">Години</th></tr></thead>
+<thead><tr><th colspan="6" v-text="locale.$Hours">Години</th></tr></thead>
 <tbody>
 	<tr v-for="row in hours">
 		<td v-for="h in row" :class="getHourClass(h)"><a @click.stop.prevent="clickHours(h)" v-text="h"/></td>
@@ -5290,7 +5380,7 @@ Vue.component('validator-control', {
 </tbody></table>
 <div class="divider"/>
 <table class="table-minutes">
-<thead><tr><th colspan="3">Хвилини</th></tr></thead>
+<thead><tr><th colspan="3" v-text="locale.$Minutes">Хвилини</th></tr></thead>
 <tbody>
 	<tr v-for="row in minutes">
 		<td v-for="m in row" :class="getMinuteClass(m)"><a @click.stop.prevent="clickMinutes(m)" v-text="m"/></td>
@@ -5312,6 +5402,7 @@ Vue.component('validator-control', {
 			}
 		},
 		computed: {
+			locale() { console.dir(locale); return locale; },
 			hours() {
 				let a = [];
 				for (let y = 0; y < 4; y++) {
@@ -6042,7 +6133,7 @@ Vue.component('validator-control', {
 })();
 // Copyright © 2015-2020 Alex Kukhtin. All rights reserved.
 
-// 20200505-7654
+// 20200624-7675
 // components/datagrid.js*/
 
 (function () {
@@ -6749,7 +6840,7 @@ Vue.component('validator-control', {
 				let cls = '';
 				if (column.fit || column.controlType === 'validator')
 					cls += 'fit';
-				if (utils.isDefined(column.dir))
+				if (this.sort && column.isSortable && utils.isDefined(column.dir))
 					cls += ' sorted';
 				return cls;
 			},
@@ -6884,7 +6975,7 @@ Vue.component('validator-control', {
 })();
 // Copyright © 2015-2020 Alex Kukhtin. All rights reserved.
 
-// 20200106-7607
+// 20200625-7676
 /*components/pager.js*/
 
 
@@ -6997,23 +7088,34 @@ template: `
 			// first
 			if (this.pages > 0)
 				children.push(renderBtn(1));
-			if (this.pages > 1)
-				children.push(renderBtn(2));
 			// middle
-			let ms = Math.max(this.currentPage - 2, 3);
-			let me = Math.min(ms + 5, this.pages - 1);
-			if (me - ms < 5)
-				ms = Math.max(me - 5, 3);
-			if (ms > 3)
-				children.push(h('span', dotsClass, '...'));
-			for (let mi = ms; mi < me; ++mi) {
-				children.push(renderBtn(mi));
+			let ms = 2;
+			let me = this.pages - 1;
+			if (this.pages == 2)
+				me = 2;
+			let sd = false, ed = false, cp = this.currentPage;
+			let len = me - ms;
+			if (len > 4) {
+				if (cp > 4)
+					sd = true;
+				if (cp < this.pages - 3)
+					ed = true;
+				if (sd && !ed)
+					ms = me - 3;
+				else if (!sd && ed)
+					me = ms + 3;
+				 else if (sd && ed) {
+					ms = cp - 1;
+					me = cp + 1;
+				}
 			}
-			if (me < this.pages - 1)
+			if (sd)
+				children.push(h('span', dotsClass, '...'));
+			for (let mi = ms; mi <= me; ++mi)
+				children.push(renderBtn(mi));
+			if (ed)
 				children.push(h('span', dotsClass, '...'));
 			// last
-			if (this.pages > 3)
-				children.push(renderBtn(this.pages - 1));
 			if (this.pages > 2)
 				children.push(renderBtn(this.pages));
 			// next
@@ -7902,7 +8004,7 @@ TODO:
 })();
 // Copyright © 2015-2020 Alex Kukhtin. All rights reserved.
 
-// 20200108-7609
+// 20200617-7674
 // components/upload.js
 
 (function () {
@@ -7929,7 +8031,8 @@ TODO:
 			tip: String,
 			readOnly: Boolean,
 			accept: String,
-			limit: Number
+			limit: Number,
+			icon: String
 		},
 		data: function () {
 			return {
@@ -7947,6 +8050,8 @@ TODO:
 				return !this.readOnly;
 			},
 			icoClass() {
+				if (this.icon)
+					return `ico-${this.icon}`;
 				return this.accept === 'image/*' ? 'ico-image' : 'ico-upload';
 			}
 		},
@@ -8528,6 +8633,14 @@ TODO:
 		}
 	};
 
+	const maximizeComponent = {
+		inserted(el, binding) {
+			let mw = el.closest('.modal-window');
+			if (mw && binding.value)
+				mw.setAttribute('maximize', 'true');
+		}
+	}
+
 	const dragDialogDirective = {
 		inserted(el, binding) {
 
@@ -8585,6 +8698,8 @@ TODO:
 	Vue.directive('drag-window', dragDialogDirective);
 
 	Vue.directive('modal-width', setWidthComponent);
+
+	Vue.directive('maximize', maximizeComponent);
 
 	const modalComponent = {
 		template: modalTemplate,
@@ -8665,7 +8780,7 @@ TODO:
 				return !!this.dialog.url;
 			},
 			mwClass() {
-				return this.modalCreated ? 'loaded' : null;
+				return this.modalCreated ? 'loaded' : '';
 			},
 			hasIcon() {
 				return !!this.dialog.style;
@@ -8722,19 +8837,19 @@ TODO:
 
 	app.components['std:modal'] = modalComponent;
 })();
-// Copyright © 2015-2019 Alex Kukhtin. All rights reserved.
+// Copyright © 2015-2020 Alex Kukhtin. All rights reserved.
 
-// 20191010-7567
+// 20200526-7662
 // components/waitcursor.js
 
 
 (function () {
 	const waitCursor = {
-		template: `<div class="wait-cursor" v-if="visible"><div class="spinner"/></div>`,
+		template: `<div class="wait-cursor" v-if="visible()"><div class="spinner"/></div>`,
 		props: {
 			ready: Boolean
 		},
-		computed: {
+		methods: {
 			visible() {
 				return !this.ready;
 			}
@@ -9068,7 +9183,7 @@ TODO:
 })();
 // Copyright © 2015-2020 Alex Kukhtin. All rights reserved.
 
-// 20200108-7609
+// 20200617-7674
 // components/image.js
 
 (function () {
@@ -9091,8 +9206,8 @@ TODO:
 <div class="a2-image">
 	<img v-if="hasImage" :src="href" :style="cssStyle" @click.prevent="clickOnImage"/>
 	<a class="remove-image" v-if="hasRemove" @click.prevent="removeImage">&#x2715;</a>
-	<a2-upload v-if="isUploadVisible" :style="uploadStyle" accept="image/*"
-		:item="itemForUpload" :base="base" :prop="prop" :new-item="newItem" :tip="tip" :read-only='readOnly' :limit="limit"/>
+	<a2-upload v-if=isUploadVisible :style=uploadStyle accept="image/*"
+		:item=itemForUpload :base=base :prop=prop :new-item=newItem :tip=tip :read-only=readOnly :limit=limit :icon=icon></a2-upload>
 </div>
 `,
 		props: {
@@ -9105,7 +9220,9 @@ TODO:
 			width: String,
 			height: String,
 			readOnly: Boolean,
-			limit: Number
+			limit: Number,
+			placeholder: String,
+			icon: String
 		},
 		data() {
 			return {
@@ -9123,7 +9240,7 @@ TODO:
 			},
 			tip() {
 				if (this.readOnly) return '';
-				return locale.$ClickToDownloadPicture;
+				return this.placeholder ? this.placeholder : locale.$ClickToDownloadPicture;
 			},
 			cssStyle() {
 				return { maxWidth: this.width, maxHeight: this.height };
@@ -9462,7 +9579,8 @@ Vue.component('a2-panel', {
 		props: {
 			dialogId: String,
 			dialogTitle: String,
-			width: String
+			width: String,
+			noClose: Boolean
 		},
 		data() {
 			return {
@@ -9479,6 +9597,7 @@ Vue.component('a2-panel', {
 		},
 		methods: {
 			__keyUp(event) {
+				if (this.noClose) return;
 				if (event.which === 27) {
 					eventBus.$emit('inlineDialog', { cmd: 'close', id: this.dialogId });
 					event.stopPropagation();
@@ -10540,9 +10659,9 @@ Vue.directive('settabindex', {
 })();
 
 
-// Copyright © 2015-2019 Alex Kukhtin. All rights reserved.
+// Copyright © 2018-2020 Alex Kukhtin. All rights reserved.
 
-/*20190114-7412/
+/*20200725-7693/
 /* directives/pageorient.js */
 
 
@@ -10550,8 +10669,13 @@ Vue.directive('settabindex', {
 
 	const pageStyle = Symbol();
 
+	let bindVal = null;
+	let elemStyle = null;
+
 	Vue.directive('page-orientation', {
 		bind(el, binding) {
+			bindVal = null;
+			elemStyle = null;
 			let style = document.createElement('style');
 			style.innerHTML = `@page {size: A4 ${binding.value}; margin:1cm;}`;
 			document.head.appendChild(style);
@@ -10565,6 +10689,82 @@ Vue.directive('settabindex', {
 			}
 		}
 	});
+
+	function resetScroll() {
+		let el = document.getElementsByClassName("with-wrapper");
+		if (el && el.length) {
+			let spw = el[0];
+			spw.scrollTo(0, 0);
+		}
+	}
+
+	function createStyleText(zoom) {
+		if (!bindVal) return null;
+		let stv = `@media print {@page {size: ${bindVal.pageSize || 'A4'} ${bindVal.orientation}; margin:${bindVal.margin};}`;
+		zoom = zoom || bindVal.zoom;
+		if (zoom)
+			stv += `.sheet-page > .sheet { zoom: ${zoom}; width: 1px;} .print-target {zoom: ${zoom}}`;
+		stv += '}';
+		return stv;
+	}
+
+	function calcPrintArea() {
+		let div = document.createElement('div');
+		div.classList.add('mm-100-100')
+		document.body.appendChild(div);
+		let rv = {
+			w: (div.clientWidth - 5) / 100.0,
+			h: (div.clientHeight - 5) / 100.0
+		};
+		document.body.removeChild(div);
+		return rv;
+	}
+
+	function printEvent(ev) {
+		// margin: 2cm;
+		resetScroll();
+		if (!bindVal) return;
+		if (bindVal.zoom != 'auto') return;
+		let ecls = document.getElementsByClassName('sheet');
+		if (!ecls || !ecls.length) return;
+		let tbl = ecls[0];
+		let pageSize = { w: 210, h: 297 }; // A4
+		let margin = { t: 10, r: 10, b: 10, l: 10 };
+		if (bindVal.orientation === 'landscape')
+			[pageSize.w, pageSize.h] = [pageSize.h, pageSize.w];
+		let k = calcPrintArea();
+		let wx = tbl.clientWidth / k.w;
+		let hy = tbl.clientHeight / k.h;
+		let zx = (pageSize.w - margin.l - margin.r - 5) / wx;
+		let zy = (pageSize.h - margin.t - margin.b - 5) / hy;
+		let z = Math.round(Math.min(zx, zy) * 1000) / 1000;
+		elemStyle.innerHTML = createStyleText(z);
+	}
+
+
+	Vue.directive('print-page', {
+		bind(el, binding) {
+			let val = binding.value;
+			bindVal = val;
+			let stv = createStyleText();
+			if (stv) {
+				let style = document.createElement('style');
+				style.innerHTML = stv;
+				elemStyle = document.head.appendChild(style);
+				el[pageStyle] = style;
+			}
+			window.addEventListener('beforeprint', printEvent);
+		},
+
+		unbind(el) {
+			let style = el[pageStyle];
+			if (style) {
+				document.head.removeChild(style);
+			}
+			window.removeEventListener('beforeprint', printEvent);
+		}
+	});
+
 })();
 // Copyright © 2015-2019 Alex Kukhtin. All rights reserved.
 
@@ -10726,7 +10926,7 @@ Vue.directive('resize', {
 
 // Copyright © 2015-2020 Alex Kukhtin. All rights reserved.
 
-/*20200129-7624*/
+/*20200725-7693*/
 // controllers/base.js
 
 (function () {
@@ -11067,7 +11267,9 @@ Vue.directive('resize', {
 						if (self.__destroyed__) return;
 						if (utils.isObject(data)) {
 							dat.$merge(data);
+							modelInfo.reconcileAll(data.$ModelInfo);
 							dat._setModelInfo_(undefined, data);
+							dat._setRuntimeInfo_(data.$runtime);
 							dat._fireLoad_();
 							dat._restoreSelections(saveSels);
 							resolve(dat);
@@ -11490,7 +11692,10 @@ Vue.directive('resize', {
 				let table = elem[0];
 				if (htmlTools) {
 					htmlTools.getColumnsWidth(table);
-					htmlTools.getRowHeight(table);
+					var tbl = table.getElementsByTagName('table');
+					// attention! from css!
+					let padding = tbl && tbl.length && tbl[0].classList.contains('compact') ? 4 : 12;
+					htmlTools.getRowHeight(table, padding);
 				}
 				let html = table.innerHTML;
 				let data = { format, html, fileName, zoom: +(window.devicePixelRatio).toFixed(2) };
@@ -11681,6 +11886,8 @@ Vue.directive('resize', {
 					return utils.format(value, opts.dataType, { hideZeros: opts.hideZeros, format: opts.format });
 				if (opts.format && opts.format.indexOf('{0}') !== -1)
 					return opts.format.replace('{0}', value);
+				if (utils.isDate(value) && opts.format)
+					return utils.format(value, 'DateTime', { format: opts.format });
 				return value;
 			},
 
@@ -11774,6 +11981,7 @@ Vue.directive('resize', {
 			},
 
 			$defer: platform.defer,
+			$print: platform.print,
 
 			$hasError(path) {
 				let ps = utils.text.splitPath(path);
@@ -12009,28 +12217,21 @@ Vue.directive('resize', {
 
 	app.components['baseController'] = base;
 })();
-// Copyright © 2015-2020 Alex Kukhtin. All rights reserved.
+// Copyright © 2020 Alex Kukhtin. All rights reserved.
 
-/*20200129-7624*/
-/* controllers/shell.js */
+/*20200604-7671*/
+/* controllers/navmenu.js */
 
 (function () {
 
-	const store = component('std:store');
-	const eventBus = require('std:eventBus');
-	const modal = component('std:modal');
-	const toastr = component('std:toastr');
-	const popup = require('std:popup');
-	const urlTools = require('std:url');
-	const period = require('std:period');
-	const log = require('std:log');
-	const utils = require('std:utils');
-	const locale = window.$$locale;
 	const platform = require('std:platform');
-	const htmlTools = require('std:html');
-	const http = require('std:http');
+	const urlTools = require('std:url');
 
-	const UNKNOWN_TITLE = 'unknown title';
+
+	function isSeparatePage(pages, seg) {
+		if (!seg || !pages) return false;
+		return pages.indexOf(seg + ',') !== -1;
+	}
 
 	function findMenu(menu, func, parentMenu) {
 		if (!menu)
@@ -12050,11 +12251,6 @@ Vue.directive('resize', {
 			}
 		}
 		return null;
-	}
-
-	function isSeparatePage(pages, seg) {
-		if (!seg || !pages) return false;
-		return pages.indexOf(seg + ',') !== -1;
 	}
 
 	function makeMenuUrl(menu, url, opts) {
@@ -12103,97 +12299,29 @@ Vue.directive('resize', {
 	}
 
 
-	const a2AppHeader = {
-		template: `
-<header class="header">
-	<div class="h-block">
-		<!--<i class="ico-user"></i>-->
-		<a class="app-title" href='/' @click.prevent="root" v-text="title" tabindex="-1"></a>
-		<span class="app-subtitle" v-text="subtitle"></span>
-	</div>
-	<div class="aligner"></div>
-	<span class="title-notify" v-if="notifyText" v-text="notifyText" :title="notifyText" :class="notifyClass"></span>
-	<div class="aligner"></div>
-	<template v-if="!isSinglePage ">
-		<a2-new-button :menu="newMenu" icon="plus" btn-style="success"></a2-new-button>
-		<slot></slot>
-		<a2-new-button :menu="settingsMenu" icon="gear-outline" :title="locale.$Settings"></a2-new-button>
-		<a class="nav-admin middle" v-if="hasFeedback" tabindex="-1" @click.prevent="showFeedback" :title="locale.$Feedback" :class="{open: feedbackVisible}"><i class="ico ico-comment-outline"></i></a>
-		<a class="nav-admin" v-if="userIsAdmin" href="/admin/" tabindex="-1"><i class="ico ico-gear-outline"></i></a>
-	</template>
-	<div class="dropdown dir-down separate" v-dropdown>
-		<button class="btn user-name" toggle :title="personName"><i class="ico ico-user"></i> <span id="layout-person-name" class="person-name" v-text="personName"></span><span class="caret"></span></button>
-		<div class="dropdown-menu menu down-left">
-			<a v-if="!isSinglePage " v-for="(itm, itmIndex) in profileItems" @click.prevent="doProfileMenu(itm)" class="dropdown-item" tabindex="-1"><i class="ico" :class="'ico-' + itm.icon"></i> <span v-text="itm.title" :key="itmIndex"></span></a>
-			<a @click.prevent="changePassword" class="dropdown-item" tabindex="-1"><i class="ico ico-access"></i> <span v-text="locale.$ChangePassword"></span></a>
-			<div class="divider"></div>
-			<form id="logoutForm" method="post" action="/account/logoff">
-				<a href="javascript:document.getElementById('logoutForm').submit()" tabindex="-1" class="dropdown-item"><i class="ico ico-exit"></i> <span v-text="locale.$Quit"></span></a>
-			</form>
-		</div>
-	</div>
-</header>
-`,
-		props: {
-			title: String,
-			subtitle: String,
-			userState: Object,
-			personName: String,
-			userIsAdmin: Boolean,
-			menu: Array,
-			newMenu: Array,
-			settingsMenu: Array,
-			appData: Object,
-			showFeedback: Function,
-			feedbackVisible: Boolean,
-			singlePage: String,
-			changePassword: Function
-		},
-		computed: {
-			isSinglePage() {
-				return !!this.singlePage;
-			},
-			locale() { return locale; },
-			notifyText() {
-				return this.getNotify(2);
-			},
-			notifyClass() {
-				return this.getNotify(1).toLowerCase();
-			},
-			feedback() {
-				return this.appData ? this.appData.feedback : null;
-			},
-			hasFeedback() {
-				return this.appData && this.appData.feedback;
-			},
-			profileItems() {
-				return this.appData ? this.appData.profileMenu : null;
-			}
-		},
-		methods: {
-			getNotify(ix) {
-				let n = this.userState ? this.userState.Notify : null;
-				if (!n) return '';
-				let m = n.match(/\((.*)\)(.*)/);
-				if (m && m.length > ix)
-					return m[ix];
-				return '';
-			},
-			root() {
-				let opts = { title: null };
-				let currentUrl = this.$store.getters.url;
-				let menuUrl = this.isSinglePage ? ('/' + this.singlePage) : makeMenuUrl(this.menu, '/', opts);
-				if (currentUrl === menuUrl) {
-					return; // already in root
-				}
-				this.$store.commit('navigate', { url: menuUrl, title: opts.title });
-			},
-			doProfileMenu(itm) {
-				store.commit('navigate', { url: itm.url });
-			}
-		}
-	};
 
+	app.components['std:navmenu'] = {
+		findMenu,
+		makeMenuUrl,
+		isSeparatePage
+	};
+})();	
+// Copyright © 2020 Alex Kukhtin. All rights reserved.
+
+/*20200611-7672*/
+/* controllers/navbar.js */
+
+(function () {
+
+	const locale = window.$$locale;
+	const menu = component('std:navmenu');
+	const eventBus = require('std:eventBus');
+	const period = require('std:period');
+	const store = component('std:store');
+	const urlTools = require('std:url');
+	const http = require('std:http');
+
+	// a2-nav-bar
 	const a2NavBar = {
 		template: `
 <ul class="nav-bar">
@@ -12210,7 +12338,8 @@ Vue.directive('resize', {
 `,
 		props: {
 			menu: Array,
-			period: period.constructor
+			period: period.constructor,
+			isNavbarMenu: Boolean
 		},
 		computed: {
 			seg0: () => store.getters.seg0,
@@ -12232,12 +12361,12 @@ Vue.directive('resize', {
 					return;
 				let storageKey = 'menu:' + urlTools.combine(window.$$rootUrl, item.Url);
 				let savedUrl = localStorage.getItem(storageKey) || '';
-				if (savedUrl && !findMenu(item.Menu, (mi) => mi.Url === savedUrl)) {
+				if (savedUrl && !menu.findMenu(item.Menu, (mi) => mi.Url === savedUrl)) {
 					// saved segment not found in current menu
 					savedUrl = '';
 				}
 				let opts = { title: null, seg2: savedUrl };
-				let url = makeMenuUrl(this.menu, item.Url, opts);
+				let url = menu.makeMenuUrl(this.menu, item.Url, opts);
 				this.$store.commit('navigate', { url: url, title: opts.title });
 			},
 			showHelp() {
@@ -12272,28 +12401,114 @@ Vue.directive('resize', {
 		}
 	};
 
-
-	const sideBarBase = {
+	// a2-nav-bar-page
+	const a2NavBarPage = {
+		template: `
+<div class="menu-navbar-overlay" @click.stop=closeNavMenu>
+<div class="menu-navbar" :class="{show:visible}">
+<div class="menu-navbar-top">
+	<a href='' class=menu-navbar-back @click.stop.prevent=closeNavMenu><i class="ico ico-grid2"></i></a>
+	<h2 v-text=title></h2>
+</div>
+<ul class=menu-navbar-list>
+	<li v-for="(item, index) in menu" :key=index>
+		<a class="menu-navbar-link" :href="itemHref(item)" @click.prevent="navigate(item)" :class="{active : isActive(item)}">
+			<i class="ico" :class=icoClass(item)></i>
+			<span v-text="item.Name"></span>
+		</a>
+	</li>
+</ul>
+<div class="aligner"/>
+<a class=powered-by-a2v10 href="https://a2v10.com" rel=noopener target=_blank><i class="ico ico-a2logo"></i> Powered by A2v10</a>
+</div></div>
+`,
 		props: {
 			menu: Array,
-			compact: Boolean
+			isNavbarMenu: Boolean,
+			title:String
+		},
+		data() {
+			return {
+				visible: false
+			};
 		},
 		computed: {
 			seg0: () => store.getters.seg0,
 			seg1: () => store.getters.seg1,
-			cssClass() {
-				let cls = 'side-bar';
-				if (this.compact)
-					cls += '-compact';
-				return cls + (this.$parent.sideBarCollapsed ? ' collapsed' : ' expanded');
+			locale() { return locale; },
+			that() { return this; }
+		},
+		methods: {
+			isActive(item) {
+				return this.seg0 === item.Url;
 			},
+			isActive2(item) {
+				return this.seg1 === item.Url;
+			},
+			itemHref: (item) => '/' + item.Url,
+			icoClass(item) {
+				return item.Icon ? 'ico-' + item.Icon : 'ico-empty';
+			},
+			navigate(item) {
+				if (this.isActive(item))
+					return;
+				this.closeNavMenu();
+				let storageKey = 'menu:' + urlTools.combine(window.$$rootUrl, item.Url);
+				let savedUrl = localStorage.getItem(storageKey) || '';
+				if (savedUrl && !menu.findMenu(item.Menu, (mi) => mi.Url === savedUrl)) {
+					// saved segment not found in current menu
+					savedUrl = '';
+				}
+				let opts = { title: null, seg2: savedUrl };
+				let url = menu.makeMenuUrl(this.menu, item.Url, opts);
+				this.$store.commit('navigate', { url: url, title: opts.title });
+			},
+			closeNavMenu() {
+				this.visible = false;
+				eventBus.$emit('clickNavMenu', false);
+			}
+		},
+		mounted() {
+			setTimeout(() => {
+				this.visible = true;
+			}, 5);
+		}
+	};
+
+	app.components['std:navbar'] = {
+		standardNavBar: a2NavBar,
+		pageNavBar: a2NavBarPage
+	};
+})();	
+// Copyright © 2020 Alex Kukhtin. All rights reserved.
+
+/*20200611-7673*/
+/* controllers/sidebar.js */
+
+(function () {
+
+	const menu = component('std:navmenu');
+	const store = component('std:store');
+	const urlTools = require('std:url');
+	const htmlTools = require('std:html');
+
+	const UNKNOWN_TITLE = 'unknown title';
+
+	const sideBarBase = {
+		props: {
+			menu: Array,
+			mode: String
+		},
+		computed: {
+			seg0: () => store.getters.seg0,
+			seg1: () => store.getters.seg1,
 			sideMenu() {
 				let top = this.topMenu;
 				return top ? top.Menu : null;
 			},
 			topMenu() {
 				let seg0 = this.seg0;
-				return findMenu(this.menu, (mi) => mi.Url === seg0);
+				return menu.findMenu(this.menu, (mi) => mi.Url === seg0);
 			}
 		},
 		methods: {
@@ -12314,6 +12529,7 @@ Vue.directive('resize', {
 			navigate(item) {
 				if (this.isActive(item))
 					return;
+				if (!item.Url) return;
 				let top = this.topMenu;
 				if (top) {
 					let url = urlTools.combine(top.Url, item.Url);
@@ -12376,20 +12592,181 @@ Vue.directive('resize', {
 			bodyIsVisible() {
 				return !this.$parent.sideBarCollapsed || this.compact;
 			},
+			compact() {
+				return this.mode === 'Compact';
+			},
 			title() {
 				let sm = this.sideMenu;
 				if (!sm)
 					return UNKNOWN_TITLE;
 				let seg1 = this.seg1;
-				let am = findMenu(sm, (mi) => mi.Url === seg1);
+				let am = menu.findMenu(sm, (mi) => mi.Url === seg1);
 				if (am)
 					return am.Name || UNKNOWN_TITLE;
 				return UNKNOWN_TITLE;
+			},
+			cssClass() {
+				let cls = 'side-bar';
+				if (this.compact)
+					cls += '-compact';
+				return cls + (this.$parent.sideBarCollapsed ? ' collapsed' : ' expanded');
 			}
 		},
 		methods: {
 			folderSelect(item) {
 				return !!item.Url;
+			}
+		}
+	};
+
+	const a2TabSideBar = {
+		template: `
+<div class="side-bar-top">
+	<div class="a2-tab-bar">
+		<div v-for="mi in topMenu.Menu" class="a2-tab-bar-item">
+			<a :href="itemHref(mi)" @click.stop.prevent="navigate(mi)" v-text=mi.Name class="a2-tab-button" :class="{active: isActive(mi)}"></a>
+		</div>
+	</div>
+</div>
+`,
+		mixins: [sideBarBase],
+		computed: {
+		},
+		methods: {
+		}
+	};
+
+
+	app.components['std:sidebar'] = {
+		standardSideBar: a2SideBar,
+		compactSideBar: a2SideBar,
+		tabSideBar: a2TabSideBar
+	};
+})();	
+// Copyright © 2015-2020 Alex Kukhtin. All rights reserved.
+
+/*20200624-7676*/
+/* controllers/shell.js */
+
+(function () {
+
+	const store = component('std:store');
+	const eventBus = require('std:eventBus');
+	const modal = component('std:modal');
+	const toastr = component('std:toastr');
+	const popup = require('std:popup');
+	const urlTools = require('std:url');
+	const period = require('std:period');
+	const log = require('std:log');
+	const utils = require('std:utils');
+	const locale = window.$$locale;
+	const platform = require('std:platform');
+	const navBar = component('std:navbar');
+	const sideBar = component('std:sidebar');
+	const menu = component('std:navmenu');
+
+	const a2AppHeader = {
+		template: `
+<header class="header">
+	<div class=h-menu v-if=isNavBarMenu @click.stop.prevent=clickMenu><i class="ico ico-grid2"></i></div>
+	<div class=h-block v-if='!isNavBarMenu'>
+		<!--<i class="ico-user"></i>-->
+		<a class=app-title href='/' @click.prevent="root" v-text="title" tabindex="-1"></a>
+		<span class=app-subtitle v-text="subtitle"></span>
+	</div>
+	<div v-if=isNavBarMenu class=h-menu-title v-text=seg0text></div>
+	<div class="aligner"></div>
+	<span class="title-notify" v-if="notifyText" v-text="notifyText" :title="notifyText" :class="notifyClass"></span>
+	<div class="aligner"></div>
+	<template v-if="!isSinglePage ">
+		<a2-new-button :menu="newMenu" icon="plus" btn-style="success"></a2-new-button>
+		<slot></slot>
+		<a2-new-button :menu="settingsMenu" icon="gear-outline" :title="locale.$Settings"></a2-new-button>
+		<a class="nav-admin middle" v-if="hasFeedback" tabindex="-1" @click.prevent="showFeedback" :title="locale.$Feedback" :class="{open: feedbackVisible}"><i class="ico ico-comment-outline"></i></a>
+		<a class="nav-admin" v-if="userIsAdmin" href="/admin/" tabindex="-1"><i class="ico ico-gear-outline"></i></a>
+	</template>
+	<div class="dropdown dir-down separate" v-dropdown>
+		<button class="btn user-name" toggle :title="personName"><i class="ico ico-user"></i> <span id="layout-person-name" class="person-name" v-text="personName"></span><span class="caret"></span></button>
+		<div class="dropdown-menu menu down-left">
+			<a v-if="!isSinglePage " v-for="(itm, itmIndex) in profileItems" @click.prevent="doProfileMenu(itm)" class="dropdown-item" tabindex="-1"><i class="ico" :class="'ico-' + itm.icon"></i> <span v-text="itm.title" :key="itmIndex"></span></a>
+			<a @click.prevent="changePassword" class="dropdown-item" tabindex="-1"><i class="ico ico-access"></i> <span v-text="locale.$ChangePassword"></span></a>
+			<div class="divider"></div>
+			<form id="logoutForm" method="post" action="/account/logoff">
+				<a href="javascript:document.getElementById('logoutForm').submit()" tabindex="-1" class="dropdown-item"><i class="ico ico-exit"></i> <span v-text="locale.$Quit"></span></a>
+			</form>
+		</div>
+	</div>
+</header>
+`,
+		props: {
+			title: String,
+			subtitle: String,
+			userState: Object,
+			personName: String,
+			userIsAdmin: Boolean,
+			menu: Array,
+			newMenu: Array,
+			settingsMenu: Array,
+			appData: Object,
+			showFeedback: Function,
+			feedbackVisible: Boolean,
+			singlePage: String,
+			changePassword: Function,
+			navBarMode: String
+		},
+		computed: {
+			isSinglePage() {
+				return !!this.singlePage;
+			},
+			locale() { return locale; },
+			notifyText() {
+				return this.getNotify(2);
+			},
+			notifyClass() {
+				return this.getNotify(1).toLowerCase();
+			},
+			feedback() {
+				return this.appData ? this.appData.feedback : null;
+			},
+			hasFeedback() {
+				return this.appData && this.appData.feedback;
+			},
+			profileItems() {
+				return this.appData ? this.appData.profileMenu : null;
+			},
+			isNavBarMenu() {
+				return this.navBarMode === 'Menu';
+			},
+			seg0text() {
+				let seg0 = this.$store.getters.seg0;
+				let mx = this.menu.find(x => x.Url === seg0);
+				return mx ? mx.Name : '';
+			}
+		},
+		methods: {
+			getNotify(ix) {
+				let n = this.userState ? this.userState.Notify : null;
+				if (!n) return '';
+				let m = n.match(/\((.*)\)(.*)/);
+				if (m && m.length > ix)
+					return m[ix];
+				return '';
+			},
+			root() {
+				let opts = { title: null };
+				let currentUrl = this.$store.getters.url;
+				let menuUrl = this.isSinglePage ? ('/' + this.singlePage) : menu.makeMenuUrl(this.menu, '/', opts);
+				if (currentUrl === menuUrl) {
+					return; // already in root
+				}
+				this.$store.commit('navigate', { url: menuUrl, title: opts.title });
+			},
+			doProfileMenu(itm) {
+				store.commit('navigate', { url: itm.url });
+			},
+			clickMenu() {
+				if (this.isNavBarMenu)
+					eventBus.$emit('clickNavMenu', true);
 			}
 		}
 	};
@@ -12422,7 +12799,7 @@ Vue.directive('resize', {
 				let route = this.$store.getters.route;
 				if (route.seg0 === 'app')
 					return 'full-view';
-				if (isSeparatePage(this.pages, route.seg0))
+				if (menu.isSeparatePage(this.pages, route.seg0))
 					return 'full-view';
 				return route.len === 3 ? 'partial-page' :
 					route.len === 2 ? 'full-page' : 'full-view';
@@ -12450,21 +12827,25 @@ Vue.directive('resize', {
 	const a2MainView = {
 		store,
 		template: `
-<div :class="cssClass" class="main-view">
-	<a2-nav-bar :menu="menu" v-show="navBarVisible" :period="period"></a2-nav-bar>
-	<a2-side-bar :menu="menu" v-show="sideBarVisible" :compact='isSideBarCompact'></a2-side-bar>
-	<a2-content-view :pages="pages"></a2-content-view>
-	<div class="load-indicator" v-show="pendingRequest"></div>
-	<div class="modal-stack" v-if="hasModals">
+<div :class=cssClass class=main-view>
+	<component :is=navBarComponent :title=title :menu=menu v-if=isNavBarVisible 
+		:period=period :is-navbar-menu=isNavBarMenu></component>
+	<component :is=sideBarComponent v-if=sideBarVisible :menu=menu :mode=sideBarMode></component>
+	<a2-content-view :pages=pages></a2-content-view>
+	<div class=load-indicator v-show=pendingRequest></div>
+	<div class=modal-stack v-if=hasModals>
 		<div class="modal-wrapper modal-animation-frame" v-for="dlg in modals" :class="{show: dlg.wrap}">
-			<a2-modal :dialog="dlg"></a2-modal>
+			<a2-modal :dialog=dlg></a2-modal>
 		</div>
 	</div>
 	<a2-toastr></a2-toastr>
 </div>`,
 		components: {
-			'a2-nav-bar': a2NavBar,
-			'a2-side-bar': a2SideBar,
+			'a2-nav-bar': navBar.standardNavBar,
+			'a2-nav-bar-page': navBar.pageNavBar,
+			'a2-side-bar': sideBar.standardSideBar,
+			'a2-side-bar-compact': sideBar.compactSideBar,
+			'a2-side-bar-tab': sideBar.tabSideBar,
 			'a2-content-view': contentView,
 			'a2-modal': modal,
 			'a2-toastr': toastr
@@ -12472,23 +12853,36 @@ Vue.directive('resize', {
 		props: {
 			menu: Array,
 			sideBarMode: String,
+			navBarMode: String,
 			period: period.constructor,
-			pages: String
+			pages: String,
+			title: String
 		},
 		data() {
 			return {
 				sideBarCollapsed: false,
+				showNavBar: true,
 				requestsCount: 0,
 				modals: [],
 				modalRequeryUrl: ''
 			};
 		},
 		computed: {
-			route() {
-				return this.$store.getters.route;
+			navBarComponent() {
+				return this.isNavBarMenu ? 'a2-nav-bar-page' : 'a2-nav-bar';
+			},
+			sideBarComponent() {
+				if (this.sideBarMode === 'Compact')
+					return 'a2-side-bar-compact';
+				else if (this.sideBarMode === 'TabBar')
+					return 'a2-side-bar-tab';
+				return 'a2-side-bar';
 			},
 			isSideBarCompact() {
 				return this.sideBarMode === 'Compact';
+			},
+			route() {
+				return this.$store.getters.route;
 			},
 			sideBarInitialCollapsed() {
 				let sb = localStorage.getItem('sideBarCollapsed');
@@ -12499,21 +12893,32 @@ Vue.directive('resize', {
 					return true;
 				return false;
 			},
-			navBarVisible() {
+			isNavBarVisible() {
+				if (!this.showNavBar) return false;
+				if (this.isNavBarMenu) return true;
 				let route = this.route;
-				if (isSeparatePage(this.pages, route.seg0)) return false;
+				if (menu.isSeparatePage(this.pages, route.seg0)) return false;
 				return route.seg0 !== 'app' && (route.len === 2 || route.len === 3);
 			},
 			sideBarVisible() {
 				let route = this.route;
 				return route.seg0 !== 'app' && route.len === 3;
 			},
+			isSideBarTop() {
+				return this.sideBarMode === 'TabBar';
+			},
 			cssClass() {
-				let clpscls = this.isSideBarCompact ? 'side-bar-compact-' : 'side-bar-';
-				return clpscls + (this.sideBarCollapsed ? 'collapsed' : 'expanded');
+				let cls = (this.isNavBarMenu ? 'nav-bar-menu ' : '') +
+					'side-bar-position-' + (this.isSideBarTop ? 'top ' : 'left ');
+				if (this.isSideBarTop)
+					cls += !this.sideBarVisible ? 'side-bar-hidden' : '';
+				else
+					cls += this.sideBarCollapsed ? 'collapsed' : 'expanded';
+				return cls;
 			},
 			pendingRequest() { return !this.hasModals && this.requestsCount > 0; },
-			hasModals() { return this.modals.length > 0; }
+			hasModals() { return this.modals.length > 0; },
+			isNavBarMenu() {return this.navBarMode === 'Menu';}
 		},
 		methods: {
 			setupWrapper(dlg) {
@@ -12522,10 +12927,15 @@ Vue.directive('resize', {
 					dlg.wrap = true;
 					//console.dir("wrap:" + dlg.wrap);
 				}, 50); // same as modal
+			},
+			showNavMenu(bShow) {
+				this.showNavBar = bShow;
 			}
 		},
 		created() {
 			let me = this;
+			if (this.isNavBarMenu)
+				this.showNavBar = false;
 			eventBus.$on('beginRequest', function () {
 				//if (me.hasModals)
 					//return;
@@ -12547,6 +12957,9 @@ Vue.directive('resize', {
 				}
 				return null;
 			}
+
+			if (this.isNavBarMenu)
+				eventBus.$on('clickNavMenu', this.showNavMenu);
 
 			eventBus.$on('modal', function (modal, prms) {
 				let id = utils.getStringId(prms ? prms.data : null);
@@ -12696,7 +13109,7 @@ Vue.directive('resize', {
 			if (menuPath === '/home' && this.menu && !this.menu.find(v => v.Url.toLowerCase() === 'home')) {
 				menuPath = '/';
 			}
-			let newUrl = makeMenuUrl(this.menu, menuPath, opts);
+			let newUrl = menu.makeMenuUrl(this.menu, menuPath, opts);
 			newUrl = newUrl + window.location.search;
 			this.$store.commit('setstate', { url: newUrl, title: opts.title });
 
@@ -12705,7 +13118,7 @@ Vue.directive('resize', {
 				title: ''
 			};
 
-			firstUrl.url = makeMenuUrl(this.menu, '/', opts);
+			firstUrl.url = menu.makeMenuUrl(this.menu, '/', opts);
 
 			firstUrl.title = opts.title;
 			urlTools.firstUrl = firstUrl;
@@ -12748,7 +13161,7 @@ Vue.directive('resize', {
 			},
 			singlePage() {
 				let seg0 = this.$store.getters.seg0;
-				if (isSeparatePage(this.pages, seg0))
+				if (menu.isSeparatePage(this.pages, seg0))
 					return seg0;
 				return undefined;
 			}
@@ -12896,7 +13309,7 @@ Vue.directive('resize', {
 	});
 
 	app.components['std:shellController'] = shell;
-})();	
+})();
 // Copyright © 2015-2019 Alex Kukhtin. All rights reserved.
 
 /*20181115-7578*/

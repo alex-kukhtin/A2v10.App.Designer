@@ -8,7 +8,7 @@ namespace A2v10.App.Builder.SqlServer
 {
 	public class SqlProcedureBuilder
 	{
-		ISolutionOptions _opts;
+		private readonly ISolutionOptions _opts;
 
 		public SqlProcedureBuilder(ISolutionOptions opts)
 		{
@@ -66,6 +66,28 @@ begin
 			return sb.ToString();
 		}
 
+
+		String BuildDetails(ITable model)
+		{
+			if (model == null) return null;
+			if (model.details == null)
+				return null;
+			var sb = new StringBuilder();
+			foreach (var (_, t) in model.details)
+			{
+				var tableName = t.Plural;
+				sb.AppendLine(@$"
+	merge [{t.Schema}].[{tableName}] as t
+	using @{tableName} as s
+	on t.[Id] = s.[Id] and t.[{model.name}] = @RetId
+	when matched then update set {GetUpdateFields(t, model)}
+	when not matched by target then {GetInsertFields(t, model)}
+	when not matched by source and t.[{model.name}] = @RetId then delete;"
+				);
+			}
+			return sb.ToString();
+		}
+
 		public String BuildUpdate(ITable model)
 		{
 			ITable table = model.GetBaseTable();
@@ -88,12 +110,12 @@ begin
 	merge [{table.Schema}].[{tableName}] as t
 	using @{table.name} as s
 	on (t.Id = s.Id)
-	when matched then update set {GetUpdateFields(table)}
-	when not matched by target then {GetInsertFields(table)}
+	when matched then update set {GetUpdateFields(table, null)}
+	when not matched by target then {GetInsertFields(table, null)}
 	output $action, inserted.Id into @output(op, id);
-	
-	select top(1) @RetId = id from @output;
 
+	select top(1) @RetId = id from @output;
+{BuildDetails(table)}
 	execute [{table.Schema}].[{table.name}.Load] @UserId = @UserId, @Id = @RetId;"
 			);
 
@@ -123,28 +145,38 @@ begin
 			return sb.ToString();
 		}
 
-		String GetUpdateFields(ITable table)
+		String GetUpdateFields(ITable table, ITable parent)
 		{
-			return new StringBuilder()
-				.AppendJoin(",", table.fields.Where(f => !f.Value.parameter).Select(
+			var sb = new StringBuilder();
+			if (parent != null)
+			{
+				sb.AppendLine();
+				sb.Append("		t.RowNo = s.RowNumber,");
+			}
+			sb.AppendJoin(",", table.fields.Where(f => !f.Value.parameter).Select(
 					f => $"{Environment.NewLine}		t.[{f.Key}] = s.[{f.Key}]")
-				)
-				.AppendLine(",")
-				.Append("		DateModified = a2sys.fn_getCurrentDate()")
-				.ToString();
+				);
+			if (parent == null)
+				sb.AppendLine(",")
+					.Append("		DateModified = a2sys.fn_getCurrentDate()");
+			return sb.ToString();
 		}
 
-		String GetInsertFields(ITable table)
+		String GetInsertFields(ITable table, ITable parent)
 		{
-			return new StringBuilder()
+			var sb = new StringBuilder()
 				.AppendLine()
-				.Append($"	insert (")
-				.AppendJoin(", ", table.fields.Select(f => $"[{f.Key}]"))
-				.AppendLine(")")
-				.Append($"	values (")
-				.AppendJoin(", ", table.fields.Select(f => f.Value.parameter ? $"@{f.Key}" : $"[{f.Key}]"))
-				.AppendLine(")")
-				.ToString();
+				.Append($"	insert (");
+			if (parent != null)
+				sb.Append($"[{parent.name}], RowNo, ");
+			sb.AppendJoin(", ", table.fields.Select(f => $"[{f.Key}]"))
+				.AppendLine(")");
+			sb.Append($"	values (");
+			if (parent != null)
+				sb.Append("@RetId, RowNumber, ");
+			sb.AppendJoin(", ", table.fields.Select(f => f.Value.parameter ? $"@{f.Key}" : $"[{f.Key}]"))
+				.Append(")");
+			return sb.ToString();
 		}
 
 		public String BuildDropBeforeTableType(ITable model)

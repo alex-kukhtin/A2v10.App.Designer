@@ -13,21 +13,24 @@ namespace A2v10.App.Builder
 {
 	public class ElementBase
 	{
+#pragma warning disable IDE1006 // Naming Styles
 		public String uiName { get; set; }
 		public String schema { get; set; }
 		public String plural { get; set; }
+#pragma warning restore IDE1006 // Naming Styles
 
 		[JsonIgnore]
 		protected Solution _solution;
+
 		[JsonIgnore]
 		public String name { get; private set; }
 
 		[JsonIgnore]
 		public String TypeName => $"T{name}";
 		[JsonIgnore]
-		public String Schema => schema == null ? _solution.schema : schema;
+		public String Schema => schema ?? _solution.schema;
 		[JsonIgnore]
-		public String Plural => plural == null ? name.ToPlural() : plural;
+		public String Plural => plural ?? name.ToPlural();
 
 		[JsonIgnore]
 		public TableKind Kind { get; private set; }
@@ -52,11 +55,13 @@ namespace A2v10.App.Builder
 
 	public class Solution
 	{
+#pragma warning disable IDE1006 // Naming Styles
 		public String schema { get; set; }
 
 		public Dictionary<String, Table> catalogs { get; set; } = new Dictionary<String, Table>();
 		public Dictionary<String, Table> documents { get; set; } = new Dictionary<String, Table>();
 		public Dictionary<String, Table> journals { get; set; } = new Dictionary<string, Table>();
+#pragma warning restore IDE1006 // Naming Styles
 
 		public void SetParent()
 		{

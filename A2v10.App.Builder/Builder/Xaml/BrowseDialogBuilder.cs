@@ -8,7 +8,8 @@ namespace A2v10.App.Builder.Xaml
 {
 	public class BrowseDialogBuilder : BaseBuilder
 	{
-		private DataGridBuilder _dataGridBuilder;
+		private readonly DataGridBuilder _dataGridBuilder;
+
 		public BrowseDialogBuilder(Styles styles)
 			: base(styles)
 		{
