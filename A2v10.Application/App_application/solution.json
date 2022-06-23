@@ -18,7 +18,7 @@
 				"Name": {
 					"type": "string",
 					"len": 50,
-					"uiName": "Назва",
+					"uiName": "Name",
 					"required": true,
 					"name": true
 				},
@@ -26,9 +26,9 @@
 					"type": "string",
 					"len": 16,
 					"unique": true,
-					"uiName": "ЕДПРОУ"
+					"uiName": "Legal Code"
 				},
-				"FullName": { "uiName": "Повна назва" },
+				"FullName": { "uiName": "Full Name" },
 				"Memo": { "uiName": "Примітка" }
 			},
 			"features": [ "index", "editDialog", "browse", "fetch" ]

@@ -1,8 +1,8 @@
 ﻿/*
-Copyright © 2008-2020 Alex Kukhtin
+Copyright © 2008-2021 Alex Kukhtin
 
-Last updated : 24 jun 2020
-module version : 7053
+Last updated : 27 jun 2021
+module version : 7061
 */
 ------------------------------------------------
 set nocount on;
@@ -32,9 +32,9 @@ end
 go
 ------------------------------------------------
 if not exists(select * from a2sys.Versions where Module = N'std:system')
-	insert into a2sys.Versions (Module, [Version]) values (N'std:system', 7053);
+	insert into a2sys.Versions (Module, [Version]) values (N'std:system', 7061);
 else
-	update a2sys.Versions set [Version] = 7053 where Module = N'std:system';
+	update a2sys.Versions set [Version] = 7061 where Module = N'std:system';
 go
 ------------------------------------------------
 if not exists(select * from INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA=N'a2sys' and TABLE_NAME=N'SysParams')
@@ -52,6 +52,20 @@ go
 if not exists(select * from INFORMATION_SCHEMA.COLUMNS where TABLE_SCHEMA=N'a2sys' and TABLE_NAME=N'SysParams' and COLUMN_NAME=N'DateValue')
 begin
 	alter table a2sys.SysParams add DateValue datetime null;
+end
+go
+------------------------------------------------
+if exists (select * from sys.objects where object_id = object_id(N'a2sys.fn_toUtcDateTime') and type in (N'FN', N'IF', N'TF', N'FS', N'FT'))
+	drop function a2sys.fn_toUtcDateTime;
+go
+------------------------------------------------
+create function a2sys.fn_toUtcDateTime(@date datetime)
+returns datetime
+as
+begin
+	declare @mins int;
+	set @mins = datediff(minute,getdate(),getutcdate());
+	return dateadd(minute, @mins, @date);
 end
 go
 ------------------------------------------------
@@ -171,6 +185,34 @@ begin
 end
 go
 ------------------------------------------------
+if not exists(select * from INFORMATION_SCHEMA.DOMAINS where DOMAIN_SCHEMA=N'a2sys' and DOMAIN_NAME=N'GUID.TableType' and DATA_TYPE=N'table type')
+begin
+	create type a2sys.[GUID.TableType]
+	as table(
+		Id uniqueidentifier null
+	);
+end
+go
+------------------------------------------------
+if not exists(select * from INFORMATION_SCHEMA.DOMAINS where DOMAIN_SCHEMA=N'a2sys' and DOMAIN_NAME=N'NameValue.TableType' and DATA_TYPE=N'table type')
+begin
+	create type a2sys.[NameValue.TableType]
+	as table(
+		[Name] nvarchar(255),
+		[Value] nvarchar(max)
+	);
+end
+go
+------------------------------------------------
+if not exists(select * from INFORMATION_SCHEMA.DOMAINS where DOMAIN_SCHEMA=N'a2sys' and DOMAIN_NAME=N'Kind.TableType' and DATA_TYPE=N'table type')
+begin
+	create type a2sys.[Kind.TableType]
+	as table(
+		Kind nchar(4) null
+	);
+end
+go
+------------------------------------------------
 if exists (select * from INFORMATION_SCHEMA.ROUTINES where ROUTINE_SCHEMA=N'a2sys' and ROUTINE_NAME=N'GetVersions')
 	drop procedure a2sys.[GetVersions]
 go
@@ -181,6 +223,24 @@ begin
 	set nocount on;
 	set transaction isolation level read uncommitted;
 	select [Module], [Version], [File], [Title] from a2sys.Versions;
+end
+go
+------------------------------------------------
+if exists (select * from INFORMATION_SCHEMA.ROUTINES where ROUTINE_SCHEMA=N'a2sys' and ROUTINE_NAME=N'SetVersion')
+	drop procedure a2sys.[SetVersion]
+go
+------------------------------------------------
+create procedure a2sys.[SetVersion]
+@Module nvarchar(255),
+@Version int
+as
+begin
+	set nocount on;
+	set transaction isolation level read committed;
+	if not exists(select * from a2sys.Versions where Module = @Module)
+		insert into a2sys.Versions (Module, [Version]) values (@Module, @Version);
+	else
+		update a2sys.Versions set [Version] = @Version where Module = @Module;
 end
 go
 ------------------------------------------------
@@ -203,8 +263,8 @@ if exists (select * from INFORMATION_SCHEMA.ROUTINES where ROUTINE_SCHEMA=N'a2sy
 go
 ------------------------------------------------
 create procedure [a2sys].[UploadApplicationFile]
-	@Path nvarchar(255),
-	@Stream nvarchar(max)
+@Path nvarchar(255),
+@Stream nvarchar(max)
 as
 begin
 	set nocount on;
@@ -214,6 +274,106 @@ begin
 	if @@rowcount = 0
 		insert into a2sys.AppFiles([Path], Stream)
 		values (@Path, @Stream);
+end
+go
+------------------------------------------------
+if not exists(select * from INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA=N'a2sys' and TABLE_NAME=N'DbEvents')
+begin
+create table a2sys.DbEvents 
+(
+	[Id] uniqueidentifier not null constraint PK_DbEvents primary key
+	constraint DF_DbEvents_Id default newid(),
+	ItemId bigint,
+	[Path] nvarchar(255),
+	[Command] nvarchar(255),
+	[Source] nvarchar(255),
+	[State] nvarchar(32) constraint DF_DbEvents_State default N'Init',
+	DateCreated datetime constraint DF_DbEvents_DateCreated default(a2sys.fn_getCurrentDate()),
+	DateHold datetime,
+	DateComplete datetime,
+	[JsonParams] nvarchar(1024) sparse,
+	ErrorMessage nvarchar(1024) sparse
+)
+end
+go
+------------------------------------------------
+if not exists(select * from INFORMATION_SCHEMA.COLUMNS where TABLE_SCHEMA=N'a2sys' and TABLE_NAME=N'DbEvents' and COLUMN_NAME=N'Source')
+begin
+	alter table a2sys.DbEvents add [Source] nvarchar(255);
+end
+go
+------------------------------------------------
+if exists (select * from INFORMATION_SCHEMA.ROUTINES where ROUTINE_SCHEMA=N'a2sys' and ROUTINE_NAME=N'DbEvent.Add')
+	drop procedure a2sys.[DbEvent.Add]
+go
+------------------------------------------------
+create procedure a2sys.[DbEvent.Add]
+@ItemId bigint,
+@Path nvarchar(255),
+@Command nvarchar(255),
+@Source nvarchar(255)
+as
+begin
+	set nocount on;
+	set transaction isolation level read committed;
+	insert into a2sys.DbEvents(ItemId, [Path], Command, [Source]) values
+		(@ItemId, @Path, @Command, @Source);
+end
+go
+------------------------------------------------
+if exists (select * from INFORMATION_SCHEMA.ROUTINES where ROUTINE_SCHEMA=N'a2sys' and ROUTINE_NAME=N'DbEvent.Fetch')
+	drop procedure a2sys.[DbEvent.Fetch]
+go
+------------------------------------------------
+create procedure a2sys.[DbEvent.Fetch]
+as
+begin
+	set nocount on;
+	set transaction isolation level read committed;
+
+	declare @rtable table(Id uniqueidentifier, ItemId bigint, [Path] nvarchar(255),
+		[JsonParams] nvarchar(1024), Command nvarchar(255), [Source] nvarchar(255));
+
+	update a2sys.DbEvents set [State] = N'Hold', DateHold = a2sys.fn_getCurrentDate()
+	output inserted.Id, inserted.ItemId, inserted.[Path], inserted.Command, inserted.JsonParams, inserted.[Source]
+	into @rtable(Id, ItemId, [Path], Command, JsonParams, [Source])
+	where [State] = N'Init';
+
+	select [Id], ItemId, [Path], Command, [Source], JsonParams from @rtable;
+end
+go
+------------------------------------------------
+if exists (select * from INFORMATION_SCHEMA.ROUTINES where ROUTINE_SCHEMA=N'a2sys' and ROUTINE_NAME=N'DbEvent.Error')
+	drop procedure a2sys.[DbEvent.Error]
+go
+------------------------------------------------
+create procedure a2sys.[DbEvent.Error]
+@Id uniqueidentifier,
+@ErrorMessage nvarchar(1024) = null
+as
+begin
+	set nocount on;
+	set transaction isolation level read committed;
+	set xact_abort on;
+	update a2sys.[DbEvents] set [State]=N'Fail', 
+		ErrorMessage = @ErrorMessage, DateComplete = a2sys.fn_getCurrentDate()
+	where Id=@Id;
+end
+go
+------------------------------------------------
+if exists (select * from INFORMATION_SCHEMA.ROUTINES where ROUTINE_SCHEMA=N'a2sys' and ROUTINE_NAME=N'DbEvent.Complete')
+	drop procedure a2sys.[DbEvent.Complete]
+go
+------------------------------------------------
+create procedure a2sys.[DbEvent.Complete]
+@Id uniqueidentifier
+as
+begin
+	set nocount on;
+	set transaction isolation level read committed;
+	set xact_abort on;
+	update a2sys.[DbEvents] set [State]=N'Complete', DateComplete = a2sys.fn_getCurrentDate()
+	where Id=@Id;
 end
 go
 ------------------------------------------------

@@ -15,9 +15,9 @@
   </Page.Pager>
   <DataGrid ItemsSource="{Bind Parent.ItemsSource}" GridLines="Horizontal" Hover="True" Striped="True" FixedHeader="True" Style="Light" Sort="True">
     <DataGridColumn Header="Код" Content="{Bind Id}" Role="Id" />
-    <DataGridColumn Header="Назва" Content="{Bind Name}" />
-    <DataGridColumn Header="ЕДПРОУ" Content="{Bind Code}" />
-    <DataGridColumn Header="Повна назва" Content="{Bind FullName}" />
+    <DataGridColumn Header="Name" Content="{Bind Name}" />
+    <DataGridColumn Header="Legal Code" Content="{Bind Code}" />
+    <DataGridColumn Header="Full Name" Content="{Bind FullName}" />
     <DataGridColumn Header="Примітка" Content="{Bind Memo}" />
   </DataGrid>
 </Page>

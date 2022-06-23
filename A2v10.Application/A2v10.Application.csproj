@@ -13,17 +13,18 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>A2v10.Application</RootNamespace>
     <AssemblyName>A2v10.Application</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <UseIISExpress>true</UseIISExpress>
     <Use64BitIISExpress />
-    <IISExpressSSLPort />
+    <IISExpressSSLPort>44378</IISExpressSSLPort>
     <IISExpressAnonymousAuthentication />
     <IISExpressWindowsAuthentication />
     <IISExpressUseClassicPipelineMode />
     <UseGlobalApplicationHostFile />
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
-    <TypeScriptToolsVersion>3.8</TypeScriptToolsVersion>
+    <TypeScriptToolsVersion>4.3</TypeScriptToolsVersion>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -44,47 +45,87 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="A2v10.Web.Mvc, Version=10.0.7696.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\A2v10.Web.Runtime.10.0.7696\lib\net461\A2v10.Web.Mvc.dll</HintPath>
+    <Reference Include="A2v10.Data.Interfaces, Version=10.0.7272.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\A2v10.Web.Runtime.10.0.7851\lib\net48\A2v10.Data.Interfaces.dll</HintPath>
     </Reference>
-    <Reference Include="A2v10.Workflow, Version=10.0.7696.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\A2v10.Web.Runtime.10.0.7696\lib\net461\A2v10.Workflow.dll</HintPath>
+    <Reference Include="A2v10.Infrastructure, Version=10.0.7851.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\A2v10.Web.Runtime.10.0.7851\lib\net48\A2v10.Infrastructure.dll</HintPath>
     </Reference>
-    <Reference Include="A2v10.Xaml, Version=10.0.7696.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\A2v10.Web.Runtime.10.0.7696\lib\net461\A2v10.Xaml.dll</HintPath>
+    <Reference Include="A2v10.Messaging, Version=10.0.7851.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\A2v10.Web.Runtime.10.0.7851\lib\net48\A2v10.Messaging.dll</HintPath>
+    </Reference>
+    <Reference Include="A2v10.Reports, Version=10.0.7851.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\A2v10.Web.Runtime.10.0.7851\lib\net48\A2v10.Reports.dll</HintPath>
+    </Reference>
+    <Reference Include="A2v10.Web.Mvc, Version=10.0.7851.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\A2v10.Web.Runtime.10.0.7851\lib\net48\A2v10.Web.Mvc.dll</HintPath>
+    </Reference>
+    <Reference Include="A2v10.Workflow, Version=10.0.7851.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\A2v10.Web.Runtime.10.0.7851\lib\net48\A2v10.Workflow.dll</HintPath>
+    </Reference>
+    <Reference Include="A2v10.Xaml, Version=10.0.7851.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\A2v10.Web.Runtime.10.0.7851\lib\net48\A2v10.Xaml.dll</HintPath>
+    </Reference>
+    <Reference Include="A2v10.Xaml.Bootstrap, Version=10.0.7851.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\A2v10.Web.Runtime.10.0.7851\lib\net48\A2v10.Xaml.Bootstrap.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Web.Infrastructure, Version=2.0.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\A2v10.Web.Runtime.10.0.7851\lib\net48\Microsoft.Web.Infrastructure.dll</HintPath>
     </Reference>
     <Reference Include="System.Activities" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Web.ApplicationServices" />
+    <Reference Include="System.Web.DynamicData" />
+    <Reference Include="System.Web.Entity" />
+    <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Xaml" />
+    <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="App_application\%40sql\platform\a2v10admin.sql" />
     <Content Include="App_application\%40sql\platform\a2v10platform.sql" />
+    <Content Include="App_application\%40sql\platform\mt\a2v10multitenant.sql" />
     <Content Include="App_application\%40sql\platform\source\a2v10admin.sql" />
     <Content Include="App_application\%40sql\platform\source\a2v10api.sql" />
     <Content Include="App_application\%40sql\platform\source\a2v10messaging.sql" />
     <Content Include="App_application\%40sql\platform\source\a2v10security.sql" />
     <Content Include="App_application\%40sql\platform\source\a2v10system.sql" />
     <Content Include="App_application\%40sql\platform\source\a2v10ui.sql" />
+    <Content Include="App_application\%40sql\platform\source\a2v10ui_simple.sql" />
     <Content Include="App_application\%40sql\platform\source\a2v10workflow.sql" />
     <Content Include="App_application\sample\document\document\edit.template.js" />
     <Content Include="App_application\sample\document\document\index.template.js" />
     <Content Include="App_application\sample\document\waybill\edit.template.js" />
     <Content Include="App_application\sample\document\waybill\index.template.js" />
+    <Content Include="css\blue.colorscheme.css" />
+    <Content Include="css\blue.colorscheme.min.css" />
+    <Content Include="css\default.colorscheme.css" />
+    <Content Include="css\default.colorscheme.min.css" />
     <Content Include="css\fonts\A2v10.svg" />
+    <Content Include="css\mobile.css" />
+    <Content Include="css\mobile.min.css" />
+    <Content Include="css\site.advance.css" />
+    <Content Include="css\site.advance.min.css" />
     <Content Include="css\site.css" />
     <Content Include="css\site.min.css" />
     <Content Include="favicon.ico" />
     <Content Include="Global.asax" />
     <Content Include="localization\default.de.txt" />
     <Content Include="localization\default.en.txt" />
+    <Content Include="localization\default.pl.txt" />
     <Content Include="localization\default.ru.txt" />
     <Content Include="localization\default.uk.txt" />
+    <Content Include="scripts\bootstrap\main.js" />
+    <Content Include="scripts\bootstrap\main.min.js" />
     <Content Include="scripts\d3.min.js" />
     <Content Include="scripts\locale-de.min.js" />
     <Content Include="scripts\locale-en.min.js" />
+    <Content Include="scripts\locale-pl.min.js" />
     <Content Include="scripts\locale-ru.min.js" />
     <Content Include="scripts\locale-uk.min.js" />
     <Content Include="scripts\main.js" />
+    <Content Include="scripts\main.min.js" />
+    <Content Include="scripts\mobile.js" />
     <Content Include="scripts\vue.js" />
     <Content Include="scripts\vue.min.js" />
     <Content Include="Web.config" />
@@ -104,12 +145,13 @@
     <Content Include="App_application\sample\document\waybill\model.json" />
     <Content Include="Web.config.sample" />
     <Content Include="tsconfig.json" />
-    <Content Include="css\fonts\A2v10.woff2" />
     <Content Include="css\fonts\A2v10.woff" />
     <Content Include="css\fonts\A2v10.ttf" />
     <Content Include="css\fonts\A2v10.eot" />
     <Content Include="App_application\%40schemas\sql-json-schema.json" />
     <Content Include="App_application\%40schemas\model-json-schema.json" />
+    <Content Include="App_application\%40schemas\app-json-schema.json" />
+    <Content Include="App_application\%40schemas\api-model-json-schema.json" />
     <None Include="packages.config" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
@@ -121,6 +163,8 @@
   <ItemGroup>
     <TypeScriptCompile Include="App_application\%40types\platform.d.ts" />
     <TypeScriptCompile Include="App_application\sample\catalog\agent\index.template.ts" />
+    <TypeScriptCompile Include="App_application\sample\catalog\warehouse\edit.template.ts" />
+    <TypeScriptCompile Include="App_application\sample\catalog\warehouse\index.template.ts" />
     <TypeScriptCompile Include="App_application\sample\document\document\edit.template.ts" />
     <TypeScriptCompile Include="App_application\sample\document\document\index.template.ts" />
     <TypeScriptCompile Include="App_application\sample\document\waybill\edit.template.ts" />
@@ -157,6 +201,11 @@
       <SubType>Designer</SubType>
     </Content>
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="App_application\sample\catalog\agent\browse.dialog.xaml">
+      <SubType>Designer</SubType>
+    </Content>
+  </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
@@ -173,7 +222,7 @@
           <AutoAssignPort>True</AutoAssignPort>
           <DevelopmentServerPort>58882</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>http://localhost:58882/</IISUrl>
+          <IISUrl>https://localhost:44378/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>
@@ -183,12 +232,12 @@
       </FlavorProperties>
     </VisualStudio>
   </ProjectExtensions>
-  <Import Project="..\packages\A2v10.Web.Runtime.10.0.7696\build\A2v10.Web.Runtime.targets" Condition="Exists('..\packages\A2v10.Web.Runtime.10.0.7696\build\A2v10.Web.Runtime.targets')" />
+  <Import Project="..\packages\A2v10.Web.Runtime.10.0.7851\build\A2v10.Web.Runtime.targets" Condition="Exists('..\packages\A2v10.Web.Runtime.10.0.7851\build\A2v10.Web.Runtime.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\A2v10.Web.Runtime.10.0.7696\build\A2v10.Web.Runtime.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\A2v10.Web.Runtime.10.0.7696\build\A2v10.Web.Runtime.targets'))" />
+    <Error Condition="!Exists('..\packages\A2v10.Web.Runtime.10.0.7851\build\A2v10.Web.Runtime.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\A2v10.Web.Runtime.10.0.7851\build\A2v10.Web.Runtime.targets'))" />
   </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

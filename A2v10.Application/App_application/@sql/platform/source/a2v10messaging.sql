@@ -1,17 +1,11 @@
 ﻿/*
-Copyright © 2008-2019 Alex Kukhtin
+Copyright © 2008-2021 Alex Kukhtin
 
-Last updated : 21 dec 2019
-module version : 7053
+Last updated : 09 apr 2020
+module version : 7055
 */
 ------------------------------------------------
-begin
-	set nocount on;
-	if not exists(select * from a2sys.Versions where Module = N'std:messaging')
-		insert into a2sys.Versions (Module, [Version]) values (N'std:messaging', 7053);
-	else
-		update a2sys.Versions set [Version] = 7053 where Module = N'std:messaging';
-end
+exec a2sys.SetVersion N'std:messaging', 7055;
 go
 ------------------------------------------------
 if not exists(select * from INFORMATION_SCHEMA.SCHEMATA where SCHEMA_NAME=N'a2messaging')
@@ -59,9 +53,13 @@ begin
 		[Message] bigint not null
 			constraint FK_Parameters_Messages_Id references a2messaging.[Messages](Id),
 		[Name] nvarchar(255) not null,
-		[Value] nvarchar(255) not null
+		[Value] nvarchar(max) null
 	);
 end
+go
+------------------------------------------------
+if not exists (select * from sys.indexes where object_id = object_id(N'a2messaging.Parameters') and name = N'IX_MessagingParameters_Message')
+	create nonclustered index IX_MessagingParameters_Message on a2messaging.[Parameters] ([Message]);
 go
 ------------------------------------------------
 if not exists(select * from INFORMATION_SCHEMA.SEQUENCES where SEQUENCE_SCHEMA=N'a2messaging' and SEQUENCE_NAME=N'SQ_Environment')
@@ -80,6 +78,15 @@ begin
 		[Value] nvarchar(255) not null
 	);
 end
+go
+------------------------------------------------
+if not exists (select * from sys.indexes where object_id = object_id(N'a2messaging.Environment') and name = N'IX_MessagingEnvironment_Message')
+	create nonclustered index IX_MessagingEnvironment_Message on a2messaging.[Environment] ([Message]);
+go
+------------------------------------------------
+if not exists (select * from sys.indexes where object_id = object_id(N'a2messaging.Environment') and name = N'IX_MessagingEnvironment_Name')
+	create nonclustered index IX_MessagingEnvironment_Name on a2messaging.[Environment] ([Name])
+	include ([Message],[Value]);
 go
 ------------------------------------------------
 if not exists(select * from INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA=N'a2messaging' and TABLE_NAME=N'Log')
@@ -151,7 +158,7 @@ go
 create type a2messaging.[NameValue.TableType] as
 table (
 	[Name] nvarchar(255),
-	[Value] nvarchar(255)
+	[Value] nvarchar(max)
 )
 go
 ------------------------------------------------

@@ -4,9 +4,9 @@
     <Button Content="Закрити" Command="{BindCmd Close}" />
   </Dialog.Buttons>
   <Grid>
-    <TextBox Value="{Bind Agent.Name}" Label="Назва" />
-    <TextBox Value="{Bind Agent.Code}" Label="ЕДПРОУ" />
-    <TextBox Value="{Bind Agent.FullName}" Label="Повна назва" />
+    <TextBox Value="{Bind Agent.Name}" Label="Name" />
+    <TextBox Value="{Bind Agent.Code}" Label="Legal Code" />
+    <TextBox Value="{Bind Agent.FullName}" Label="Full Name" />
     <TextBox Value="{Bind Agent.Memo}" Label="Примітка" />
   </Grid>
 </Dialog>

@@ -187,8 +187,8 @@ begin
 			return
 $@"
 {SqlBuilder.divider}
-if exists(select * from INFORMATION_SCHEMA.ROUTINES where ROUTINE_SCHEMA=N'{table.Schema}' and ROUTINE_NAME=N'{table.name}.Update')
-	drop procedure [{table.Schema}].[{table.name}.Update];
+drop procedure if exists [{table.Schema}].[{table.name}.Update];
+drop procedure if exists [{table.Schema}].[{table.name}.Metadata];
 go";
 		}
 	}

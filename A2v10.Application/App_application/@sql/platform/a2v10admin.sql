@@ -1,24 +1,20 @@
 /*
 ------------------------------------------------
-Copyright © 2008-2020 Alex Kukhtin
+Copyright © 2008-2022 Alex Kukhtin
 
-Last updated : 25 jul 2020
-module version : 7171
+Last updated : 30 jan 2022
+module version : 7753
 */
 ------------------------------------------------
-begin
-	set nocount on;
-	if not exists(select * from a2sys.Versions where Module = N'std:admin')
-		insert into a2sys.Versions (Module, [Version]) values (N'std:admin', 7171);
-	else
-		update a2sys.Versions set [Version] = 7171 where Module = N'std:admin';
-end
+exec a2sys.SetVersion N'std:admin', 7753;
 go
 ------------------------------------------------
 if not exists(select * from INFORMATION_SCHEMA.SCHEMATA where SCHEMA_NAME=N'a2admin')
-begin
 	exec sp_executesql N'create schema a2admin';
-end
+go
+------------------------------------------------
+set nocount on;
+grant execute on schema ::a2admin to public;
 go
 ------------------------------------------------
 if exists (select * from INFORMATION_SCHEMA.ROUTINES where ROUTINE_SCHEMA=N'a2admin' and ROUTINE_NAME=N'Ensure.Admin')
@@ -95,10 +91,13 @@ begin
 	exec a2admin.[Ensure.Admin]  @TenantId, @UserId;
 
 	declare @Asc nvarchar(10), @Desc nvarchar(10), @RowCount int;
-	set @Asc = N'asc'; set @Desc = N'desc';
+	declare @Fr nvarchar(255);
+	set @Fr = @Fragment;
+	set @Asc = N'asc';
+	set @Desc = N'desc';
 	set @Dir = isnull(@Dir, @Asc);
-	if @Fragment is not null
-		set @Fragment = N'%' + upper(@Fragment) + N'%';
+	if @Fr is not null
+		set @Fr = N'%' + upper(@Fr) + N'%';
 
 	-- list of users
 	with T([Id!!Id], [Name!!Name], [Phone!!Phone], Email, PersonName, Memo, IsAdmin, [LastLoginDate!!UtcDate], LastLoginHost, [!!RowNumber])
@@ -121,9 +120,9 @@ begin
 				case when @Order=N'Memo' and @Dir = @Desc then u.Memo end desc
 			)
 		from a2security.ViewUsers u
-		where @Fragment is null or upper(u.UserName) like @Fragment or upper(u.PersonName) like @Fragment
-			or upper(u.Email) like @Fragment or upper(u.PhoneNumber) like @Fragment 
-			or cast(u.Id as nvarchar) like @Fragment or upper(u.Memo) like @Fragment
+		where @Fr is null or upper(u.UserName) like @Fr or upper(u.PersonName) like @Fr
+			or upper(u.Email) like @Fr or upper(u.PhoneNumber) like @Fr 
+			or cast(u.Id as nvarchar) like @Fr or upper(u.Memo) like @Fr
 	)
 	select [Users!TUser!Array]=null, *, [!!RowCount] = (select count(1) from T)
 	from T
@@ -135,7 +134,6 @@ begin
 		[!Users!Offset] = @Offset, [!Users.Fragment!Filter] = @Fragment;
 end
 go
-
 ------------------------------------------------
 if exists (select * from INFORMATION_SCHEMA.ROUTINES where ROUTINE_SCHEMA=N'a2admin' and ROUTINE_NAME=N'User.Load')
 	drop procedure [a2admin].[User.Load]
@@ -193,7 +191,8 @@ as table(
 	[Email] nvarchar(255),
 	[Phone] nvarchar(255),
 	[PersonName] nvarchar(255),
-	[Memo] nvarchar(255)
+	[Memo] nvarchar(255),
+	[Locale] nvarchar(255)
 )
 go
 ------------------------------------------------
@@ -238,10 +237,11 @@ begin
 			target.[Email] = source.Email,
 			target.PhoneNumber = source.Phone,
 			target.Memo = source.Memo,
-			target.PersonName = source.PersonName
+			target.PersonName = source.PersonName,
+			target.[Locale] = isnull(source.[Locale], N'')
 	when not matched by target then
-		insert ([UserName], Email, PhoneNumber, Memo, PersonName, SecurityStamp)
-		values ([Name], Email, Phone, Memo, PersonName, N'')
+		insert ([UserName], Email, PhoneNumber, Memo, PersonName, SecurityStamp, [Locale])
+		values ([Name], Email, Phone, Memo, PersonName, N'', isnull([Locale], N''))
 	output 
 		$action op,
 		inserted.Id id
@@ -337,12 +337,14 @@ begin
 	exec a2admin.[Ensure.Admin]  @TenantId, @UserId;
 
 	declare @Asc nvarchar(10), @Desc nvarchar(10), @RowCount int;
+	declare @Fr nvarchar(255);
+	set @Fr = @Fragment;
 	set @Asc = N'asc'; set @Desc = N'desc';
 	set @Dir = isnull(@Dir, @Asc);
 
 	set @Dir = isnull(@Dir, @Asc);
-	if @Fragment is not null
-		set @Fragment = N'%' + upper(@Fragment) + N'%';
+	if @Fr is not null
+		set @Fr = N'%' + upper(@Fr) + N'%';
 
 	-- list of groups
 	with T([Id!!Id], [Name!!Name], [Key], [Memo], [UserCount], [!!RowNumber]) 
@@ -362,8 +364,8 @@ begin
 				case when @Order=N'Memo' and @Dir = @Desc then g.Memo end desc
 			)
 		from a2security.Groups g
-		where g.Void = 0 and (@Fragment is null or upper(g.[Name]) like @Fragment or upper(g.[Key]) like @Fragment
-			or upper(g.Memo) like @Fragment or cast(g.Id as nvarchar) like @Fragment)
+		where g.Void = 0 and (@Fr is null or upper(g.[Name]) like @Fr or upper(g.[Key]) like @Fr
+			or upper(g.Memo) like @Fr or cast(g.Id as nvarchar) like @Fr)
 	)
 
 	select [Groups!TGroup!Array]=null, *, [!!RowCount] = (select count(1) from T) 
@@ -582,12 +584,14 @@ begin
 	exec a2admin.[Ensure.Admin]  @TenantId, @UserId;
 
 	declare @Asc nvarchar(10), @Desc nvarchar(10), @RowCount int;
+	declare @Fr nvarchar(255);
+	set @Fr = @Fragment;
 	set @Asc = N'asc'; set @Desc = N'desc';
 	set @Dir = isnull(@Dir, @Asc);
 
 	set @Dir = isnull(@Dir, @Asc);
-	if @Fragment is not null
-		set @Fragment = N'%' + upper(@Fragment) + N'%';
+	if @Fr is not null
+		set @Fr = N'%' + upper(@Fr) + N'%';
 
 	-- list of roles
 	with T([Id!!Id], [Name!!Name], [Key], [Memo], [ElemCount], [!!RowNumber]) 
@@ -607,8 +611,8 @@ begin
 				case when @Order=N'Memo' and @Dir = @Desc then r.Memo end desc
 			)
 		from a2security.Roles r
-		where r.Void = 0 and (@Fragment is null or upper(r.[Name]) like @Fragment or upper(r.[Key]) like @Fragment
-			or upper(r.Memo) like @Fragment or cast(r.Id as nvarchar) like @Fragment)
+		where r.Void = 0 and (@Fr is null or upper(r.[Name]) like @Fr or upper(r.[Key]) like @Fr
+			or upper(r.Memo) like @Fr or cast(r.Id as nvarchar) like @Fr)
 	)
 
 	select [Roles!TRole!Array]=null, *, [!!RowCount] = (select count(1) from T) 
@@ -819,87 +823,6 @@ begin
 end
 go
 ------------------------------------------------
-create or alter procedure a2admin.[Process.Index]
-	@TenantId int = null,
-	@UserId bigint,
-	@Order nvarchar(255) = N'Id',
-	@Dir nvarchar(255) = N'desc',
-	@Offset int = 0,
-	@PageSize int = 20,
-	@Fragment nvarchar(255) = null
-as
-begin
-	set nocount on;
-	set transaction isolation level read uncommitted;
-
-	exec a2admin.[Ensure.Admin]  @TenantId, @UserId;
-
-	--declare @Asc nvarchar(10), @Desc nvarchar(10), @RowCount int;
-	--set @Asc = N'asc'; set @Desc = N'desc';
-	--set @Dir = isnull(@Dir, @Asc);
-	--if @Fragment is not null
-	--	set @Fragment = N'%' + upper(@Fragment) + N'%';
-
-	-- list of processes
-	with T([Id!!Id], [Kind!!Name], Base, [Owner], DateCreated, DateModified, [!!RowNumber])
-	as(
-		select p.Id, p.Kind, p.ActionBase, u.UserName, p.DateCreated, p.DateModified
-			,[!!RowNumber] = row_number() over (order by p.Id desc)
-		from a2workflow.Processes p
-			left join a2security.Users u on p.[Owner]=u.Id
-	)
-	select [Processes!TProcess!Array]=null, *, [!!RowCount] = (select count(1) from T)
-	from T
-	where [!!RowNumber] > @Offset and [!!RowNumber] <= @Offset + @PageSize
-	order by [!!RowNumber];
-
-	select [!$System!] = null, [!Processes!PageSize] = @PageSize, 
-		[!Processes!SortOrder] = @Order, [!Processes!SortDir] = @Dir,
-		[!Processes!Offset] = @Offset, [!Processes.Fragment!Filter] = @Fragment;
-end
-go
-------------------------------------------------
-create or alter procedure a2admin.[Inbox.Index]
-	@TenantId int = null,
-	@UserId bigint,
-	@Order nvarchar(255) = N'Id',
-	@Dir nvarchar(255) = N'desc',
-	@Offset int = 0,
-	@PageSize int = 20,
-	@Fragment nvarchar(255) = null
-as
-begin
-	set nocount on;
-	set transaction isolation level read uncommitted;
-
-	exec a2admin.[Ensure.Admin]  @TenantId, @UserId;
-
-	--declare @Asc nvarchar(10), @Desc nvarchar(10), @RowCount int;
-	--set @Asc = N'asc'; set @Desc = N'desc';
-	--set @Dir = isnull(@Dir, @Asc);
-	--if @Fragment is not null
-	--	set @Fragment = N'%' + upper(@Fragment) + N'%';
-
-	-- list of inboxes
-	with T([Id!!Id], [Bookmark!!Name], ProcessId, [Role], [User], [Text], DateCreated, DateRemoved, [!!RowNumber])
-	as(
-		select i.Id, i.Bookmark, i.ProcessId, i.[For], u.UserName, i.[Text], i.DateCreated, i.DateRemoved
-			,[!!RowNumber] = row_number() over (order by i.Id desc)
-		from a2workflow.Inbox i
-			left join a2security.Users u on i.ForId=u.Id
-		where @Fragment is null or i.ProcessId=try_cast(@Fragment as bigint)
-	)
-	select [Inboxes!TInbox!Array]=null, *, [!!RowCount] = (select count(1) from T)
-	from T
-	where [!!RowNumber] > @Offset and [!!RowNumber] <= @Offset + @PageSize
-	order by [!!RowNumber];
-
-	select [!$System!] = null, [!Inboxes!PageSize] = @PageSize, 
-		[!Inboxes!SortOrder] = @Order, [!Inboxes!SortDir] = @Dir,
-		[!Inboxes!Offset] = @Offset, [!Inboxes.Fragment!Filter] = @Fragment;
-end
-go
-------------------------------------------------
 begin
 	-- create admin menu
 	declare @menu table(id bigint, p0 bigint, [name] nvarchar(255), [url] nvarchar(255), icon nvarchar(255), [order] int);
@@ -909,7 +832,8 @@ begin
 		(901, 900,	N'@[Users]',	N'identity',	null,		10),
 		(910, 901,	N'@[Users]',	N'user',		N'user',	10),
 		(911, 901,	N'@[Groups]',	N'group',		N'users',	20),
-		(912, 901,	N'@[Roles]',	N'role',		N'users',	30);
+		(912, 901,	N'@[Roles]',	N'role',		N'users',	30),
+		(913, 901,	N'@[ApiUsers]',	N'api',			N'external',40);
 			
 	merge a2ui.Menu as target
 	using @menu as source
@@ -928,6 +852,156 @@ begin
 end
 go
 ------------------------------------------------
+if exists (select * from INFORMATION_SCHEMA.ROUTINES where ROUTINE_SCHEMA=N'a2admin' and ROUTINE_NAME=N'ApiUser.Index')
+	drop procedure [a2admin].[ApiUser.Index]
+go
+------------------------------------------------
+create procedure a2admin.[ApiUser.Index]
+@TenantId int = null,
+@UserId bigint
+as
+begin
+	set nocount on;
+	set transaction isolation level read uncommitted;
+
+	exec a2admin.[Ensure.Admin]  @TenantId, @UserId;
+
+	-- list of Api users
+	select [Users!TUser!Array]=null, [Id!!Id]=u.Id, [Name!!Name]=UserName, u.Memo, u.LastLoginDate, u.LastLoginHost
+	from a2security.Users u
+	where u.ApiUser = 1 and u.Void=0;
+end
+go
+------------------------------------------------
+if exists (select * from INFORMATION_SCHEMA.ROUTINES where ROUTINE_SCHEMA=N'a2admin' and ROUTINE_NAME=N'ApiUser.Load')
+	drop procedure [a2admin].[ApiUser.Load]
+go
+------------------------------------------------
+create procedure a2admin.[ApiUser.Load]
+@TenantId int = null,
+@UserId bigint,
+@Id bigint = null
+as
+begin
+	set nocount on;
+	set transaction isolation level read uncommitted;
+
+	exec a2admin.[Ensure.Admin]  @TenantId, @UserId;
+
+	-- one API user
+	select [User!TUser!Object]=null, [Id!!Id] = Id, [Name] = UserName, [Memo], 
+		LastLoginDate, LastLoginHost, [Logins!TLogin!MapObject!ApiKey:Basic] = null
+	from a2security.Users where ApiUser = 1 and Void=0 and Id=@Id;
+
+	select [!TLogin!MapObject] = null, [!!Key] = [Mode],
+		[!TUser.Logins!ParentId] = [User], ClientId, ClientSecret, ApiKey, AllowIP, RedirectUrl
+	from a2security.ApiUserLogins where [User]=@Id;
+end
+go
+------------------------------------------------
+if exists (select * from INFORMATION_SCHEMA.ROUTINES where ROUTINE_SCHEMA=N'a2admin' and ROUTINE_NAME=N'ApiUser.Metadata')
+	drop procedure [a2admin].[ApiUser.Metadata]
+go
+------------------------------------------------
+if exists (select * from INFORMATION_SCHEMA.ROUTINES where ROUTINE_SCHEMA=N'a2admin' and ROUTINE_NAME=N'ApiUser.Update')
+	drop procedure [a2admin].[ApiUser.Update]
+go
+------------------------------------------------
+if exists(select * from INFORMATION_SCHEMA.DOMAINS where DOMAIN_SCHEMA=N'a2admin' and DOMAIN_NAME=N'ApiUser.TableType' and DATA_TYPE=N'table type')
+	drop type [a2admin].[ApiUser.TableType];
+go
+------------------------------------------------
+create type a2admin.[ApiUser.TableType]
+as table(
+	Id bigint null,
+	[Name] nvarchar(255),
+	[Memo] nvarchar(255)
+)
+go
+------------------------------------------------
+if exists(select * from INFORMATION_SCHEMA.DOMAINS where DOMAIN_SCHEMA=N'a2admin' and DOMAIN_NAME=N'ApiLogin.TableType' and DATA_TYPE=N'table type')
+	drop type [a2admin].[ApiLogin.TableType];
+go
+------------------------------------------------
+create type a2admin.[ApiLogin.TableType]
+as table(
+	Id bigint null,
+	ParentId bigint,
+	[CurrentKey] nvarchar(255),
+	[ClientId] nvarchar(255),
+	[ClientSecret] nvarchar(255),
+	[ApiKey] nvarchar(255),
+	[AllowIP] nvarchar(255),
+	[Memo] nvarchar(255),
+	RedirectUrl nvarchar(255)
+)
+go
+------------------------------------------------
+create procedure a2admin.[ApiUser.Metadata]
+as
+begin
+	set nocount on;
+
+	declare @User a2admin.[ApiUser.TableType];
+	declare @Logins a2admin.[ApiLogin.TableType];
+	select [User!User!Metadata]=null, * from @User;
+	select [Logins!User.Logins*!Metadata] = null, * from @Logins;
+end
+go
+------------------------------------------------
+create procedure [a2admin].[ApiUser.Update]
+	@TenantId int = null,
+	@UserId bigint,
+	@User a2admin.[ApiUser.TableType] readonly,
+	@Logins a2admin.[ApiLogin.TableType] readonly
+as
+begin
+	set nocount on;
+	set transaction isolation level read committed;
+	set xact_abort on;
+
+	exec a2admin.[Ensure.Admin]  @TenantId, @UserId;
+
+	declare @output table(op sysname, id bigint);
+	declare @RetId bigint;
+
+	merge a2security.Users as target
+	using @User as source
+	on (target.Id = source.Id)
+	when matched then
+		update set 
+			target.[UserName] = source.[Name],
+			target.Memo = source.Memo
+	when not matched by target then
+		insert ([UserName], Memo, SecurityStamp, ApiUser)
+		values ([Name], Memo, N'', 1)
+	output 
+		$action op,
+		inserted.Id id
+	into @output(op, id);
+
+	select top(1) @RetId = id from @output;
+
+	merge a2security.ApiUserLogins as t
+	using @Logins as s
+	on (t.[User] = @RetId and t.Mode = s.CurrentKey and s.CurrentKey in (N'ApiUser', N'Basic'))
+	when matched then update set
+		t.[ClientId] = s.ClientId,
+		t.[ClientSecret] = s.[ClientSecret],
+		t.[ApiKey] = s.ApiKey,
+		t.[AllowIP] = s.[AllowIP],
+		t.[RedirectUrl] = s.[RedirectUrl]
+	when not matched by target then insert
+		([User], Mode, ApiKey, ClientId, ClientSecret, AllowIP, [RedirectUrl]) values
+		(@RetId, s.CurrentKey, s.ApiKey, s.ClientId, s.ClientSecret, AllowIP, [RedirectUrl])
+	when not matched by source and t.[User] = @RetId then delete;
+		
+
+	exec a2admin.[ApiUser.Load] @TenantId = @TenantId, @UserId = @UserId, @Id = @RetId;
+end
+go
+
+------------------------------------------------
 if not exists(select * from a2security.Users where Id <> 0)
 begin
 	set nocount on;
@@ -935,11 +1009,5 @@ begin
 	values (99, N'admin@admin.com', N'c9bb451a-9d2b-4b26-9499-2d7d408ce54e', N'AJcfzvC7DCiRrfPmbVoigR7J8fHoK/xdtcWwahHDYJfKSKSWwX5pu9ChtxmE7Rs4Vg==',
 		N'System administrator', 1);
 	insert into a2security.UserGroups(UserId, GroupId) values (99, 77), (99, 1); /*predefined values*/
-end
-go
-------------------------------------------------
-begin
-	set nocount on;
-	grant execute on schema ::a2admin to public;
 end
 go

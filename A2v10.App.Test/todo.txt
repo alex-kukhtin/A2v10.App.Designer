@@ -5,7 +5,6 @@
 11. Xaml. NameFactory => BuildName(String uiName, String name) ???
 12. Generate only needed files
 18. Delegates for fetch
-19. Index.Display name for references table
 20. Index -> sort by date, currency
 21. EditXaml -> Правильная таблица
 

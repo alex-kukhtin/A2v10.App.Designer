@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Application xmlns="clr-namespace:A2v10.AppBuilder;assembly=A2v10.AppBuilder" 
+			 MultiTenant="False" Schema="app">
+	<Application.Catalogs>
+		<Catalog CollectionName="Agents" Name="Agent" UiName="@[Agent]" UiCollectionName="@[Agents]"
+				IdType="Int" NameLength="50">
+			<Field Name="Memo" UiName="@[Memo]" />
+			<Field Name="Code" UiName="@[Code]" DataType="String" Length="20"
+				   Unique="Database">
+				<Field.Validation>
+					<Required/>
+					<MinMaxLength MinValue="10" MaxValue="10"/>
+				</Field.Validation>				
+			</Field>					
+		</Catalog>
+	</Application.Catalogs>
+	<Application.Documents>
+		<Document Name="Document" CollectionName="Documents">
+			<Document.Fields>				
+			</Document.Fields>
+			<Document.Details>
+				<Details Name="Document.Rows">
+					<Field Name="Item" UiName="@[Item]">
+						<Required Message="@[Error.SelectItem]"/>
+					</Field>
+					<Field Name="Qty" DataType="Float">
+						<Required Message="@[Error.EnterQty]"/>
+					</Field>
+				</Details>
+			</Document.Details>
+		</Document>
+	</Application.Documents>
+</Application>

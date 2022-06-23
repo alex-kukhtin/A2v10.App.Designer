@@ -1,6 +1,6 @@
 /*!
- * Vue.js v2.6.11
- * (c) 2014-2019 Evan You
+ * Vue.js v2.6.14
+ * (c) 2014-2021 Evan You
  * Released under the MIT License.
  */
 (function (global, factory) {
@@ -1704,13 +1704,14 @@
         type = [type];
       }
       for (var i = 0; i < type.length && !valid; i++) {
-        var assertedType = assertType(value, type[i]);
+        var assertedType = assertType(value, type[i], vm);
         expectedTypes.push(assertedType.expectedType || '');
         valid = assertedType.valid;
       }
     }
 
-    if (!valid) {
+    var haveExpectedTypes = expectedTypes.some(function (t) { return t; });
+    if (!valid && haveExpectedTypes) {
       warn(
         getInvalidTypeMessage(name, value, expectedTypes),
         vm
@@ -1728,9 +1729,9 @@
     }
   }
 
-  var simpleCheckRE = /^(String|Number|Boolean|Function|Symbol)$/;
+  var simpleCheckRE = /^(String|Number|Boolean|Function|Symbol|BigInt)$/;
 
-  function assertType (value, type) {
+  function assertType (value, type, vm) {
     var valid;
     var expectedType = getType(type);
     if (simpleCheckRE.test(expectedType)) {
@@ -1745,7 +1746,12 @@
     } else if (expectedType === 'Array') {
       valid = Array.isArray(value);
     } else {
-      valid = value instanceof type;
+      try {
+        valid = value instanceof type;
+      } catch (e) {
+        warn('Invalid prop type: "' + String(type) + '" is not a constructor', vm);
+        valid = false;
+      }
     }
     return {
       valid: valid,
@@ -1753,13 +1759,15 @@
     }
   }
 
+  var functionTypeCheckRE = /^\s*function (\w+)/;
+
   /**
    * Use function string name to check built-in types,
    * because a simple equality check will fail when running
    * across different vms / iframes.
    */
   function getType (fn) {
-    var match = fn && fn.toString().match(/^\s*function (\w+)/);
+    var match = fn && fn.toString().match(functionTypeCheckRE);
     return match ? match[1] : ''
   }
 
@@ -1784,18 +1792,19 @@
       " Expected " + (expectedTypes.map(capitalize).join(', '));
     var expectedType = expectedTypes[0];
     var receivedType = toRawType(value);
-    var expectedValue = styleValue(value, expectedType);
-    var receivedValue = styleValue(value, receivedType);
     // check if we need to specify expected value
-    if (expectedTypes.length === 1 &&
-        isExplicable(expectedType) &&
-        !isBoolean(expectedType, receivedType)) {
-      message += " with value " + expectedValue;
+    if (
+      expectedTypes.length === 1 &&
+      isExplicable(expectedType) &&
+      isExplicable(typeof value) &&
+      !isBoolean(expectedType, receivedType)
+    ) {
+      message += " with value " + (styleValue(value, expectedType));
     }
     message += ", got " + receivedType + " ";
     // check if we need to specify received value
     if (isExplicable(receivedType)) {
-      message += "with value " + receivedValue + ".";
+      message += "with value " + (styleValue(value, receivedType)) + ".";
     }
     return message
   }
@@ -1810,9 +1819,9 @@
     }
   }
 
+  var EXPLICABLE_TYPES = ['string', 'number', 'boolean'];
   function isExplicable (value) {
-    var explicitTypes = ['string', 'number', 'boolean'];
-    return explicitTypes.some(function (elem) { return value.toLowerCase() === elem; })
+    return EXPLICABLE_TYPES.some(function (elem) { return value.toLowerCase() === elem; })
   }
 
   function isBoolean () {
@@ -2039,7 +2048,7 @@
     var allowedGlobals = makeMap(
       'Infinity,undefined,NaN,isFinite,isNaN,' +
       'parseFloat,parseInt,decodeURI,decodeURIComponent,encodeURI,encodeURIComponent,' +
-      'Math,Number,Date,Array,Object,Boolean,String,RegExp,Map,Set,JSON,Intl,' +
+      'Math,Number,Date,Array,Object,Boolean,String,RegExp,Map,Set,JSON,Intl,BigInt,' +
       'require' // for Webpack/Browserify
     );
 
@@ -2542,6 +2551,12 @@
 
   /*  */
 
+  function isAsyncPlaceholder (node) {
+    return node.isComment && node.asyncFactory
+  }
+
+  /*  */
+
   function normalizeScopedSlots (
     slots,
     normalSlots,
@@ -2598,9 +2613,10 @@
       res = res && typeof res === 'object' && !Array.isArray(res)
         ? [res] // single vnode
         : normalizeChildren(res);
+      var vnode = res && res[0];
       return res && (
-        res.length === 0 ||
-        (res.length === 1 && res[0].isComment) // #9658
+        !vnode ||
+        (res.length === 1 && vnode.isComment && !isAsyncPlaceholder(vnode)) // #9658, #10391
       ) ? undefined
         : res
     };
@@ -2673,26 +2689,28 @@
    */
   function renderSlot (
     name,
-    fallback,
+    fallbackRender,
     props,
     bindObject
   ) {
     var scopedSlotFn = this.$scopedSlots[name];
     var nodes;
-    if (scopedSlotFn) { // scoped slot
+    if (scopedSlotFn) {
+      // scoped slot
       props = props || {};
       if (bindObject) {
         if (!isObject(bindObject)) {
-          warn(
-            'slot v-bind without argument expects an Object',
-            this
-          );
+          warn('slot v-bind without argument expects an Object', this);
         }
         props = extend(extend({}, bindObject), props);
       }
-      nodes = scopedSlotFn(props) || fallback;
+      nodes =
+        scopedSlotFn(props) ||
+        (typeof fallbackRender === 'function' ? fallbackRender() : fallbackRender);
     } else {
-      nodes = this.$slots[name] || fallback;
+      nodes =
+        this.$slots[name] ||
+        (typeof fallbackRender === 'function' ? fallbackRender() : fallbackRender);
     }
 
     var target = props && props.slot;
@@ -2742,6 +2760,7 @@
     } else if (eventKeyName) {
       return hyphenate(eventKeyName) !== key
     }
+    return eventKeyCode === undefined
   }
 
   /*  */
@@ -3273,8 +3292,10 @@
   }
 
   function createComponentInstanceForVnode (
-    vnode, // we know it's MountedComponentVNode but flow doesn't
-    parent // activeInstance in lifecycle state
+    // we know it's MountedComponentVNode but flow doesn't
+    vnode,
+    // activeInstance in lifecycle state
+    parent
   ) {
     var options = {
       _isComponent: true,
@@ -3413,7 +3434,7 @@
       ns = (context.$vnode && context.$vnode.ns) || config.getTagNamespace(tag);
       if (config.isReservedTag(tag)) {
         // platform built-in elements
-        if (isDef(data) && isDef(data.nativeOn)) {
+        if (isDef(data) && isDef(data.nativeOn) && data.tag !== 'component') {
           warn(
             ("The .native modifier for v-on is only valid on components but it was used on <" + tag + ">."),
             context
@@ -3735,12 +3756,6 @@
         ? factory.loadingComp
         : factory.resolved
     }
-  }
-
-  /*  */
-
-  function isAsyncPlaceholder (node) {
-    return node.isComment && node.asyncFactory
   }
 
   /*  */
@@ -4111,7 +4126,8 @@
     var hasDynamicScopedSlot = !!(
       (newScopedSlots && !newScopedSlots.$stable) ||
       (oldScopedSlots !== emptyObject && !oldScopedSlots.$stable) ||
-      (newScopedSlots && vm.$scopedSlots.$key !== newScopedSlots.$key)
+      (newScopedSlots && vm.$scopedSlots.$key !== newScopedSlots.$key) ||
+      (!newScopedSlots && vm.$scopedSlots.$key)
     );
 
     // Any static slot children from the parent may have changed during parent's
@@ -4563,11 +4579,8 @@
         var oldValue = this.value;
         this.value = value;
         if (this.user) {
-          try {
-            this.cb.call(this.vm, value, oldValue);
-          } catch (e) {
-            handleError(e, this.vm, ("callback for watcher \"" + (this.expression) + "\""));
-          }
+          var info = "callback for watcher \"" + (this.expression) + "\"";
+          invokeWithErrorHandling(this.cb, this.vm, [value, oldValue], this.vm, info);
         } else {
           this.cb.call(this.vm, value, oldValue);
         }
@@ -4789,6 +4802,8 @@
           warn(("The computed property \"" + key + "\" is already defined in data."), vm);
         } else if (vm.$options.props && key in vm.$options.props) {
           warn(("The computed property \"" + key + "\" is already defined as a prop."), vm);
+        } else if (vm.$options.methods && key in vm.$options.methods) {
+          warn(("The computed property \"" + key + "\" is already defined as a method."), vm);
         }
       }
     }
@@ -4941,11 +4956,10 @@
       options.user = true;
       var watcher = new Watcher(vm, expOrFn, cb, options);
       if (options.immediate) {
-        try {
-          cb.call(vm, watcher.value);
-        } catch (error) {
-          handleError(error, vm, ("callback for immediate watcher \"" + (watcher.expression) + "\""));
-        }
+        var info = "callback for immediate watcher \"" + (watcher.expression) + "\"";
+        pushTarget();
+        invokeWithErrorHandling(cb, vm, [watcher.value], vm, info);
+        popTarget();
       }
       return function unwatchFn () {
         watcher.teardown();
@@ -5243,6 +5257,8 @@
 
 
 
+
+
   function getComponentName (opts) {
     return opts && (opts.Ctor.options.name || opts.tag)
   }
@@ -5264,9 +5280,9 @@
     var keys = keepAliveInstance.keys;
     var _vnode = keepAliveInstance._vnode;
     for (var key in cache) {
-      var cachedNode = cache[key];
-      if (cachedNode) {
-        var name = getComponentName(cachedNode.componentOptions);
+      var entry = cache[key];
+      if (entry) {
+        var name = entry.name;
         if (name && !filter(name)) {
           pruneCacheEntry(cache, key, keys, _vnode);
         }
@@ -5280,9 +5296,9 @@
     keys,
     current
   ) {
-    var cached$$1 = cache[key];
-    if (cached$$1 && (!current || cached$$1.tag !== current.tag)) {
-      cached$$1.componentInstance.$destroy();
+    var entry = cache[key];
+    if (entry && (!current || entry.tag !== current.tag)) {
+      entry.componentInstance.$destroy();
     }
     cache[key] = null;
     remove(keys, key);
@@ -5300,6 +5316,32 @@
       max: [String, Number]
     },
 
+    methods: {
+      cacheVNode: function cacheVNode() {
+        var ref = this;
+        var cache = ref.cache;
+        var keys = ref.keys;
+        var vnodeToCache = ref.vnodeToCache;
+        var keyToCache = ref.keyToCache;
+        if (vnodeToCache) {
+          var tag = vnodeToCache.tag;
+          var componentInstance = vnodeToCache.componentInstance;
+          var componentOptions = vnodeToCache.componentOptions;
+          cache[keyToCache] = {
+            name: getComponentName(componentOptions),
+            tag: tag,
+            componentInstance: componentInstance,
+          };
+          keys.push(keyToCache);
+          // prune oldest entry
+          if (this.max && keys.length > parseInt(this.max)) {
+            pruneCacheEntry(cache, keys[0], keys, this._vnode);
+          }
+          this.vnodeToCache = null;
+        }
+      }
+    },
+
     created: function created () {
       this.cache = Object.create(null);
       this.keys = [];
@@ -5314,12 +5356,17 @@
     mounted: function mounted () {
       var this$1 = this;
 
+      this.cacheVNode();
       this.$watch('include', function (val) {
         pruneCache(this$1, function (name) { return matches(val, name); });
       });
       this.$watch('exclude', function (val) {
         pruneCache(this$1, function (name) { return !matches(val, name); });
       });
+    },
+
+    updated: function updated () {
+      this.cacheVNode();
     },
 
     render: function render () {
@@ -5355,12 +5402,9 @@
           remove(keys, key);
           keys.push(key);
         } else {
-          cache[key] = vnode;
-          keys.push(key);
-          // prune oldest entry
-          if (this.max && keys.length > parseInt(this.max)) {
-            pruneCacheEntry(cache, keys[0], keys, this._vnode);
-          }
+          // delay setting the cache until update
+          this.vnodeToCache = vnode;
+          this.keyToCache = key;
         }
 
         vnode.data.keepAlive = true;
@@ -5443,7 +5487,7 @@
     value: FunctionalRenderContext
   });
 
-  Vue.version = '2.6.11';
+  Vue.version = '2.6.14';
 
   /*  */
 
@@ -5480,7 +5524,7 @@
     'default,defaultchecked,defaultmuted,defaultselected,defer,disabled,' +
     'enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple,' +
     'muted,nohref,noresize,noshade,novalidate,nowrap,open,pauseonexit,readonly,' +
-    'required,reversed,scoped,seamless,selected,sortable,translate,' +
+    'required,reversed,scoped,seamless,selected,sortable,' +
     'truespeed,typemustmatch,visible'
   );
 
@@ -5604,7 +5648,7 @@
   // contain child elements.
   var isSVG = makeMap(
     'svg,animate,circle,clippath,cursor,defs,desc,ellipse,filter,font-face,' +
-    'foreignObject,g,glyph,image,line,marker,mask,missing-glyph,path,pattern,' +
+    'foreignobject,g,glyph,image,line,marker,mask,missing-glyph,path,pattern,' +
     'polygon,polyline,rect,switch,symbol,text,textpath,tspan,use,view',
     true
   );
@@ -5809,7 +5853,8 @@
 
   function sameVnode (a, b) {
     return (
-      a.key === b.key && (
+      a.key === b.key &&
+      a.asyncFactory === b.asyncFactory && (
         (
           a.tag === b.tag &&
           a.isComment === b.isComment &&
@@ -5817,7 +5862,6 @@
           sameInputType(a, b)
         ) || (
           isTrue(a.isAsyncPlaceholder) &&
-          a.asyncFactory === b.asyncFactory &&
           isUndef(b.asyncFactory.error)
         )
       )
@@ -6705,7 +6749,7 @@
       cur = attrs[key];
       old = oldAttrs[key];
       if (old !== cur) {
-        setAttr(elm, key, cur);
+        setAttr(elm, key, cur, vnode.data.pre);
       }
     }
     // #4391: in IE9, setting type can reset value for input[type=radio]
@@ -6725,8 +6769,8 @@
     }
   }
 
-  function setAttr (el, key, value) {
-    if (el.tagName.indexOf('-') > -1) {
+  function setAttr (el, key, value, isInPre) {
+    if (isInPre || el.tagName.indexOf('-') > -1) {
       baseSetAttr(el, key, value);
     } else if (isBooleanAttr(key)) {
       // set attribute for blank value
@@ -7649,7 +7693,7 @@
         // skip the update if old and new VDOM state is the same.
         // `value` is handled separately because the DOM value may be temporarily
         // out of sync with VDOM state due to focus, composition and modifiers.
-        // This  #4521 by skipping the unnecesarry `checked` update.
+        // This  #4521 by skipping the unnecessary `checked` update.
         cur !== oldProps[key]
       ) {
         // some property updates can throw
@@ -9247,7 +9291,7 @@
 
   // Regular Expressions for parsing tags and attributes
   var attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/;
-  var dynamicArgAttribute = /^\s*((?:v-[\w-]+:|@|:|#)\[[^=]+\][^\s"'<>\/=]*)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/;
+  var dynamicArgAttribute = /^\s*((?:v-[\w-]+:|@|:|#)\[[^=]+?\][^\s"'<>\/=]*)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/;
   var ncname = "[a-zA-Z_][\\-\\.0-9_a-zA-Z" + (unicodeRegExp.source) + "]*";
   var qnameCapture = "((?:" + ncname + "\\:)?" + ncname + ")";
   var startTagOpen = new RegExp(("^<" + qnameCapture));
@@ -9552,7 +9596,7 @@
   var slotRE = /^v-slot(:|$)|^#/;
 
   var lineBreakRE = /[\r\n]/;
-  var whitespaceRE$1 = /\s+/g;
+  var whitespaceRE$1 = /[ \f\t\r\n]+/g;
 
   var invalidAttributeRE = /[\s"'<>\/=]/;
 
@@ -9600,8 +9644,12 @@
     platformMustUseProp = options.mustUseProp || no;
     platformGetTagNamespace = options.getTagNamespace || no;
     var isReservedTag = options.isReservedTag || no;
-    maybeComponent = function (el) { return !!el.component || !isReservedTag(el.tag); };
-
+    maybeComponent = function (el) { return !!(
+      el.component ||
+      el.attrsMap[':is'] ||
+      el.attrsMap['v-bind:is'] ||
+      !(el.attrsMap.is ? isReservedTag(el.attrsMap.is) : isReservedTag(el.tag))
+    ); };
     transforms = pluckModuleFunction(options.modules, 'transformNode');
     preTransforms = pluckModuleFunction(options.modules, 'preTransformNode');
     postTransforms = pluckModuleFunction(options.modules, 'postTransformNode');
@@ -9894,7 +9942,7 @@
         }
       },
       comment: function comment (text, start, end) {
-        // adding anyting as a sibling to the root node is forbidden
+        // adding anything as a sibling to the root node is forbidden
         // comments should still be allowed, but ignored
         if (currentParent) {
           var child = {
@@ -10850,9 +10898,9 @@
         code += genModifierCode;
       }
       var handlerCode = isMethodPath
-        ? ("return " + (handler.value) + "($event)")
+        ? ("return " + (handler.value) + ".apply(null, arguments)")
         : isFunctionExpression
-          ? ("return (" + (handler.value) + ")($event)")
+          ? ("return (" + (handler.value) + ").apply(null, arguments)")
           : isFunctionInvocation
             ? ("return " + (handler.value))
             : handler.value;
@@ -10938,7 +10986,8 @@
     options
   ) {
     var state = new CodegenState(options);
-    var code = ast ? genElement(ast, state) : '_c("div")';
+    // fix #11483, Root level <script> tags should not be rendered.
+    var code = ast ? (ast.tag === 'script' ? 'null' : genElement(ast, state)) : '_c("div")';
     return {
       render: ("with(this){return " + code + "}"),
       staticRenderFns: state.staticRenderFns
@@ -11400,7 +11449,7 @@
   function genSlot (el, state) {
     var slotName = el.slotName || '"default"';
     var children = genChildren(el, state);
-    var res = "_t(" + slotName + (children ? ("," + children) : '');
+    var res = "_t(" + slotName + (children ? (",function(){return " + children + "}") : '');
     var attrs = el.attrs || el.dynamicAttrs
       ? genProps((el.attrs || []).concat(el.dynamicAttrs || []).map(function (attr) { return ({
           // slot props are camelized
@@ -11964,16 +12013,16 @@
 
 }));
 
-/**
- * vuex v3.1.2
- * (c) 2019 Evan You
+/*!
+ * vuex v3.6.2
+ * (c) 2021 Evan You
  * @license MIT
  */
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
   typeof define === 'function' && define.amd ? define(factory) :
-  (global = global || self, global.Vuex = factory());
-}(this, function () { 'use strict';
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Vuex = factory());
+}(this, (function () { 'use strict';
 
   function applyMixin (Vue) {
     var version = Number(Vue.version.split('.')[0]);
@@ -12031,7 +12080,11 @@
 
     store.subscribe(function (mutation, state) {
       devtoolHook.emit('vuex:mutation', mutation, state);
-    });
+    }, { prepend: true });
+
+    store.subscribeAction(function (action, state) {
+      devtoolHook.emit('vuex:action', action, state);
+    }, { prepend: true });
   }
 
   /**
@@ -12042,6 +12095,47 @@
    * @param {Function} f
    * @return {*}
    */
+  function find (list, f) {
+    return list.filter(f)[0]
+  }
+
+  /**
+   * Deep copy the given object considering circular structure.
+   * This function caches all nested objects and its copies.
+   * If it detects circular structure, use cached copy to avoid infinite loop.
+   *
+   * @param {*} obj
+   * @param {Array<Object>} cache
+   * @return {*}
+   */
+  function deepCopy (obj, cache) {
+    if ( cache === void 0 ) cache = [];
+
+    // just return if obj is immutable value
+    if (obj === null || typeof obj !== 'object') {
+      return obj
+    }
+
+    // if obj is hit, it is in circular structure
+    var hit = find(cache, function (c) { return c.original === obj; });
+    if (hit) {
+      return hit.copy
+    }
+
+    var copy = Array.isArray(obj) ? [] : {};
+    // put the copy into cache at first
+    // because we want to refer it in recursive deepCopy
+    cache.push({
+      original: obj,
+      copy: copy
+    });
+
+    Object.keys(obj).forEach(function (key) {
+      copy[key] = deepCopy(obj[key], cache);
+    });
+
+    return copy
+  }
 
   /**
    * forEach for object
@@ -12097,6 +12191,10 @@
 
   Module.prototype.getChild = function getChild (key) {
     return this._children[key]
+  };
+
+  Module.prototype.hasChild = function hasChild (key) {
+    return key in this._children
   };
 
   Module.prototype.update = function update (rawModule) {
@@ -12186,9 +12284,34 @@
   ModuleCollection.prototype.unregister = function unregister (path) {
     var parent = this.get(path.slice(0, -1));
     var key = path[path.length - 1];
-    if (!parent.getChild(key).runtime) { return }
+    var child = parent.getChild(key);
+
+    if (!child) {
+      {
+        console.warn(
+          "[vuex] trying to unregister module '" + key + "', which is " +
+          "not registered"
+        );
+      }
+      return
+    }
+
+    if (!child.runtime) {
+      return
+    }
 
     parent.removeChild(key);
+  };
+
+  ModuleCollection.prototype.isRegistered = function isRegistered (path) {
+    var parent = this.get(path.slice(0, -1));
+    var key = path[path.length - 1];
+
+    if (parent) {
+      return parent.hasChild(key)
+    }
+
+    return false
   };
 
   function update (path, targetModule, newModule) {
@@ -12364,9 +12487,13 @@
         handler(payload);
       });
     });
-    this._subscribers.forEach(function (sub) { return sub(mutation, this$1.state); });
+
+    this._subscribers
+      .slice() // shallow copy to prevent iterator invalidation if subscriber synchronously calls unsubscribe
+      .forEach(function (sub) { return sub(mutation, this$1.state); });
 
     if (
+      
       options && options.silent
     ) {
       console.warn(
@@ -12395,6 +12522,7 @@
 
     try {
       this._actionSubscribers
+        .slice() // shallow copy to prevent iterator invalidation if subscriber synchronously calls unsubscribe
         .filter(function (sub) { return sub.before; })
         .forEach(function (sub) { return sub.before(action, this$1.state); });
     } catch (e) {
@@ -12408,28 +12536,42 @@
       ? Promise.all(entry.map(function (handler) { return handler(payload); }))
       : entry[0](payload);
 
-    return result.then(function (res) {
-      try {
-        this$1._actionSubscribers
-          .filter(function (sub) { return sub.after; })
-          .forEach(function (sub) { return sub.after(action, this$1.state); });
-      } catch (e) {
-        {
-          console.warn("[vuex] error in after action subscribers: ");
-          console.error(e);
+    return new Promise(function (resolve, reject) {
+      result.then(function (res) {
+        try {
+          this$1._actionSubscribers
+            .filter(function (sub) { return sub.after; })
+            .forEach(function (sub) { return sub.after(action, this$1.state); });
+        } catch (e) {
+          {
+            console.warn("[vuex] error in after action subscribers: ");
+            console.error(e);
+          }
         }
-      }
-      return res
+        resolve(res);
+      }, function (error) {
+        try {
+          this$1._actionSubscribers
+            .filter(function (sub) { return sub.error; })
+            .forEach(function (sub) { return sub.error(action, this$1.state, error); });
+        } catch (e) {
+          {
+            console.warn("[vuex] error in error action subscribers: ");
+            console.error(e);
+          }
+        }
+        reject(error);
+      });
     })
   };
 
-  Store.prototype.subscribe = function subscribe (fn) {
-    return genericSubscribe(fn, this._subscribers)
+  Store.prototype.subscribe = function subscribe (fn, options) {
+    return genericSubscribe(fn, this._subscribers, options)
   };
 
-  Store.prototype.subscribeAction = function subscribeAction (fn) {
+  Store.prototype.subscribeAction = function subscribeAction (fn, options) {
     var subs = typeof fn === 'function' ? { before: fn } : fn;
-    return genericSubscribe(subs, this._actionSubscribers)
+    return genericSubscribe(subs, this._actionSubscribers, options)
   };
 
   Store.prototype.watch = function watch (getter, cb, options) {
@@ -12482,6 +12624,16 @@
     resetStore(this);
   };
 
+  Store.prototype.hasModule = function hasModule (path) {
+    if (typeof path === 'string') { path = [path]; }
+
+    {
+      assert(Array.isArray(path), "module path must be a string or an Array.");
+    }
+
+    return this._modules.isRegistered(path)
+  };
+
   Store.prototype.hotUpdate = function hotUpdate (newOptions) {
     this._modules.update(newOptions);
     resetStore(this, true);
@@ -12496,9 +12648,11 @@
 
   Object.defineProperties( Store.prototype, prototypeAccessors$1 );
 
-  function genericSubscribe (fn, subs) {
+  function genericSubscribe (fn, subs, options) {
     if (subs.indexOf(fn) < 0) {
-      subs.push(fn);
+      options && options.prepend
+        ? subs.unshift(fn)
+        : subs.push(fn);
     }
     return function () {
       var i = subs.indexOf(fn);
@@ -12576,7 +12730,7 @@
 
     // register in namespace map
     if (module.namespaced) {
-      if (store._modulesNamespaceMap[namespace] && "development" !== 'production') {
+      if (store._modulesNamespaceMap[namespace] && true) {
         console.error(("[vuex] duplicate namespace " + namespace + " for the namespaced module " + (path.join('/'))));
       }
       store._modulesNamespaceMap[namespace] = module;
@@ -12637,7 +12791,7 @@
 
         if (!options || !options.root) {
           type = namespace + type;
-          if (!store._actions[type]) {
+          if ( !store._actions[type]) {
             console.error(("[vuex] unknown local action type: " + (args.type) + ", global type: " + type));
             return
           }
@@ -12654,7 +12808,7 @@
 
         if (!options || !options.root) {
           type = namespace + type;
-          if (!store._mutations[type]) {
+          if ( !store._mutations[type]) {
             console.error(("[vuex] unknown local mutation type: " + (args.type) + ", global type: " + type));
             return
           }
@@ -12763,9 +12917,7 @@
   }
 
   function getNestedState (state, path) {
-    return path.length
-      ? path.reduce(function (state, key) { return state[key]; }, state)
-      : state
+    return path.reduce(function (state, key) { return state[key]; }, state)
   }
 
   function unifyObjectStyle (type, payload, options) {
@@ -12803,7 +12955,7 @@
    */
   var mapState = normalizeNamespace(function (namespace, states) {
     var res = {};
-    if (!isValidMap(states)) {
+    if ( !isValidMap(states)) {
       console.error('[vuex] mapState: mapper parameter must be either an Array or an Object');
     }
     normalizeMap(states).forEach(function (ref) {
@@ -12834,12 +12986,12 @@
   /**
    * Reduce the code which written in Vue.js for committing the mutation
    * @param {String} [namespace] - Module's namespace
-   * @param {Object|Array} mutations # Object's item can be a function which accept `commit` function as the first param, it can accept anthor params. You can commit mutation and do any other things in this function. specially, You need to pass anthor params from the mapped function.
+   * @param {Object|Array} mutations # Object's item can be a function which accept `commit` function as the first param, it can accept another params. You can commit mutation and do any other things in this function. specially, You need to pass anthor params from the mapped function.
    * @return {Object}
    */
   var mapMutations = normalizeNamespace(function (namespace, mutations) {
     var res = {};
-    if (!isValidMap(mutations)) {
+    if ( !isValidMap(mutations)) {
       console.error('[vuex] mapMutations: mapper parameter must be either an Array or an Object');
     }
     normalizeMap(mutations).forEach(function (ref) {
@@ -12875,7 +13027,7 @@
    */
   var mapGetters = normalizeNamespace(function (namespace, getters) {
     var res = {};
-    if (!isValidMap(getters)) {
+    if ( !isValidMap(getters)) {
       console.error('[vuex] mapGetters: mapper parameter must be either an Array or an Object');
     }
     normalizeMap(getters).forEach(function (ref) {
@@ -12888,7 +13040,7 @@
         if (namespace && !getModuleByNamespace(this.$store, 'mapGetters', namespace)) {
           return
         }
-        if (!(val in this.$store.getters)) {
+        if ( !(val in this.$store.getters)) {
           console.error(("[vuex] unknown getter: " + val));
           return
         }
@@ -12908,7 +13060,7 @@
    */
   var mapActions = normalizeNamespace(function (namespace, actions) {
     var res = {};
-    if (!isValidMap(actions)) {
+    if ( !isValidMap(actions)) {
       console.error('[vuex] mapActions: mapper parameter must be either an Array or an Object');
     }
     normalizeMap(actions).forEach(function (ref) {
@@ -12999,23 +13151,115 @@
    */
   function getModuleByNamespace (store, helper, namespace) {
     var module = store._modulesNamespaceMap[namespace];
-    if (!module) {
+    if ( !module) {
       console.error(("[vuex] module namespace not found in " + helper + "(): " + namespace));
     }
     return module
   }
 
-  var index = {
+  // Credits: borrowed code from fcomb/redux-logger
+
+  function createLogger (ref) {
+    if ( ref === void 0 ) ref = {};
+    var collapsed = ref.collapsed; if ( collapsed === void 0 ) collapsed = true;
+    var filter = ref.filter; if ( filter === void 0 ) filter = function (mutation, stateBefore, stateAfter) { return true; };
+    var transformer = ref.transformer; if ( transformer === void 0 ) transformer = function (state) { return state; };
+    var mutationTransformer = ref.mutationTransformer; if ( mutationTransformer === void 0 ) mutationTransformer = function (mut) { return mut; };
+    var actionFilter = ref.actionFilter; if ( actionFilter === void 0 ) actionFilter = function (action, state) { return true; };
+    var actionTransformer = ref.actionTransformer; if ( actionTransformer === void 0 ) actionTransformer = function (act) { return act; };
+    var logMutations = ref.logMutations; if ( logMutations === void 0 ) logMutations = true;
+    var logActions = ref.logActions; if ( logActions === void 0 ) logActions = true;
+    var logger = ref.logger; if ( logger === void 0 ) logger = console;
+
+    return function (store) {
+      var prevState = deepCopy(store.state);
+
+      if (typeof logger === 'undefined') {
+        return
+      }
+
+      if (logMutations) {
+        store.subscribe(function (mutation, state) {
+          var nextState = deepCopy(state);
+
+          if (filter(mutation, prevState, nextState)) {
+            var formattedTime = getFormattedTime();
+            var formattedMutation = mutationTransformer(mutation);
+            var message = "mutation " + (mutation.type) + formattedTime;
+
+            startMessage(logger, message, collapsed);
+            logger.log('%c prev state', 'color: #9E9E9E; font-weight: bold', transformer(prevState));
+            logger.log('%c mutation', 'color: #03A9F4; font-weight: bold', formattedMutation);
+            logger.log('%c next state', 'color: #4CAF50; font-weight: bold', transformer(nextState));
+            endMessage(logger);
+          }
+
+          prevState = nextState;
+        });
+      }
+
+      if (logActions) {
+        store.subscribeAction(function (action, state) {
+          if (actionFilter(action, state)) {
+            var formattedTime = getFormattedTime();
+            var formattedAction = actionTransformer(action);
+            var message = "action " + (action.type) + formattedTime;
+
+            startMessage(logger, message, collapsed);
+            logger.log('%c action', 'color: #03A9F4; font-weight: bold', formattedAction);
+            endMessage(logger);
+          }
+        });
+      }
+    }
+  }
+
+  function startMessage (logger, message, collapsed) {
+    var startMessage = collapsed
+      ? logger.groupCollapsed
+      : logger.group;
+
+    // render
+    try {
+      startMessage.call(logger, message);
+    } catch (e) {
+      logger.log(message);
+    }
+  }
+
+  function endMessage (logger) {
+    try {
+      logger.groupEnd();
+    } catch (e) {
+      logger.log('—— log end ——');
+    }
+  }
+
+  function getFormattedTime () {
+    var time = new Date();
+    return (" @ " + (pad(time.getHours(), 2)) + ":" + (pad(time.getMinutes(), 2)) + ":" + (pad(time.getSeconds(), 2)) + "." + (pad(time.getMilliseconds(), 3)))
+  }
+
+  function repeat (str, times) {
+    return (new Array(times + 1)).join(str)
+  }
+
+  function pad (num, maxLength) {
+    return repeat('0', maxLength - num.toString().length) + num
+  }
+
+  var index_cjs = {
     Store: Store,
     install: install,
-    version: '3.1.2',
+    version: '3.6.2',
     mapState: mapState,
     mapMutations: mapMutations,
     mapGetters: mapGetters,
     mapActions: mapActions,
-    createNamespacedHelpers: createNamespacedHelpers
+    createNamespacedHelpers: createNamespacedHelpers,
+    createLogger: createLogger
   };
 
-  return index;
+  return index_cjs;
 
-}));
+})));

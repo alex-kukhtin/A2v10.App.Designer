@@ -148,24 +148,24 @@ go
 -- TABLE TYPES
 
 -------------------------------------
-if exists(select * from INFORMATION_SCHEMA.ROUTINES where ROUTINE_SCHEMA=N'sample' and ROUTINE_NAME=N'Agent.Update')
-	drop procedure [sample].[Agent.Update];
+drop procedure if exists [sample].[Agent.Update];
+drop procedure if exists [sample].[Agent.Metadata];
 go
 -------------------------------------
-if exists(select * from INFORMATION_SCHEMA.ROUTINES where ROUTINE_SCHEMA=N'sample' and ROUTINE_NAME=N'Unit.Update')
-	drop procedure [sample].[Unit.Update];
+drop procedure if exists [sample].[Unit.Update];
+drop procedure if exists [sample].[Unit.Metadata];
 go
 -------------------------------------
-if exists(select * from INFORMATION_SCHEMA.ROUTINES where ROUTINE_SCHEMA=N'sample' and ROUTINE_NAME=N'Product.Update')
-	drop procedure [sample].[Product.Update];
+drop procedure if exists [sample].[Product.Update];
+drop procedure if exists [sample].[Product.Metadata];
 go
 -------------------------------------
-if exists(select * from INFORMATION_SCHEMA.ROUTINES where ROUTINE_SCHEMA=N'sample' and ROUTINE_NAME=N'Document.Update')
-	drop procedure [sample].[Document.Update];
+drop procedure if exists [sample].[Document.Update];
+drop procedure if exists [sample].[Document.Metadata];
 go
 -------------------------------------
-if exists(select * from INFORMATION_SCHEMA.ROUTINES where ROUTINE_SCHEMA=N'sample' and ROUTINE_NAME=N'Row.Update')
-	drop procedure [sample].[Row.Update];
+drop procedure if exists [sample].[Row.Update];
+drop procedure if exists [sample].[Row.Metadata];
 go-------------------------------------
 if exists(select * from INFORMATION_SCHEMA.DOMAINS where DOMAIN_SCHEMA = N'sample' and DOMAIN_NAME = N'Agent.TableType')
 	drop type [sample].[Agent.TableType];

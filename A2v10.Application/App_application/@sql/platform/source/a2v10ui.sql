@@ -1,17 +1,11 @@
 /*
-Copyright © 2008-2020 Alex Kukhtin
+Copyright © 2008-2021 Alex Kukhtin
 
-Last updated : 12 jun 2020
-module version : 7673
+Last updated : 20 jun 2021
+module version : 7680
 */
 ------------------------------------------------
-begin
-	set nocount on;
-	if not exists(select * from a2sys.Versions where Module = N'std:ui')
-		insert into a2sys.Versions (Module, [Version]) values (N'std:ui', 7673);
-	else
-		update a2sys.Versions set [Version] = 7673 where Module = N'std:ui';
-	end
+exec a2sys.SetVersion N'std:ui', 7680;
 go
 ------------------------------------------------
 if not exists(select * from INFORMATION_SCHEMA.SCHEMATA where SCHEMA_NAME=N'a2ui')
@@ -40,33 +34,42 @@ begin
 		[Order] int not null constraint DF_Menu_Order default(0),
 		[Description] nvarchar(255) null,
 		[Params] nvarchar(255) null,
-		[Feature] nchar(4) null
+		[Feature] nchar(4) null,
+		[Feature2] nvarchar(255) null,
+		[ClassName] nvarchar(255) null,
+		[Module] nvarchar(16) null
+			constraint FK_Menu_Module_Modules foreign key references a2security.Modules(Id)
 	);
 end
 go
 ------------------------------------------------
 if not exists(select * from INFORMATION_SCHEMA.COLUMNS where TABLE_SCHEMA=N'a2ui' and TABLE_NAME=N'Menu' and COLUMN_NAME=N'Help')
-begin
 	alter table a2ui.Menu add Help nvarchar(255) null;
-end
 go
 ------------------------------------------------
 if not exists(select * from INFORMATION_SCHEMA.COLUMNS where TABLE_SCHEMA=N'a2ui' and TABLE_NAME=N'Menu' and COLUMN_NAME=N'Key')
-begin
 	alter table a2ui.Menu add [Key] nchar(4) null;
-end
 go
 ------------------------------------------------
 if not exists(select * from INFORMATION_SCHEMA.COLUMNS where TABLE_SCHEMA=N'a2ui' and TABLE_NAME=N'Menu' and COLUMN_NAME=N'Params')
-begin
 	alter table a2ui.Menu add Params nvarchar(255) null;
-end
 go
 ------------------------------------------------
 if not exists(select * from INFORMATION_SCHEMA.COLUMNS where TABLE_SCHEMA=N'a2ui' and TABLE_NAME=N'Menu' and COLUMN_NAME=N'Feature')
-begin
 	alter table a2ui.Menu add [Feature] nchar(4) null;
-end
+go
+------------------------------------------------
+if not exists(select * from INFORMATION_SCHEMA.COLUMNS where TABLE_SCHEMA=N'a2ui' and TABLE_NAME=N'Menu' and COLUMN_NAME=N'Feature2')
+	alter table a2ui.Menu add Feature2 nvarchar(255) null;
+go
+------------------------------------------------
+if not exists(select * from INFORMATION_SCHEMA.COLUMNS where TABLE_SCHEMA=N'a2ui' and TABLE_NAME=N'Menu' and COLUMN_NAME=N'ClassName')
+	alter table a2ui.Menu add [ClassName] nvarchar(255) null;
+go
+------------------------------------------------
+if not exists(select * from INFORMATION_SCHEMA.COLUMNS where TABLE_SCHEMA=N'a2ui' and TABLE_NAME=N'Menu' and COLUMN_NAME=N'Module')
+	alter table a2ui.Menu add [Module] nvarchar(16) null
+			constraint FK_Menu_Module_Modules foreign key references a2security.Modules(Id);
 go
 ------------------------------------------------
 if not exists(select * from INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA=N'a2security' and TABLE_NAME=N'Menu.Acl')
@@ -142,7 +145,7 @@ begin
 	)
 	select [Menu!TMenu!Tree] = null, [Id!!Id]=RT.Id, [!TMenu.Menu!ParentId]=RT.ParentId,
 		[Menu!TMenu!Array] = null,
-		m.Name, m.Url, m.Icon, m.[Description], m.Help, m.Params
+		m.Name, m.Url, m.Icon, m.[Description], m.Help, m.Params, m.ClassName
 	from RT 
 		inner join a2security.[Menu.Acl] a on a.Menu = RT.Id
 		inner join a2ui.Menu m on RT.Id=m.Id
@@ -154,8 +157,79 @@ begin
 
 	-- system parameters
 	select [SysParams!TParam!Object]= null, [AppTitle], [AppSubTitle], [SideBarMode], [NavBarMode], [Pages]
-	from (select Name, Value=StringValue from a2sys.SysParams) as s
-		pivot (min(Value) for Name in ([AppTitle], [AppSubTitle], [SideBarMode], [NavBarMode], [Pages])) as p;
+	from (select [Name], [Value]=StringValue from a2sys.SysParams) as s
+		pivot (min([Value]) for [Name] in ([AppTitle], [AppSubTitle], [SideBarMode], [NavBarMode], [Pages])) as p;
+end
+go
+------------------------------------------------
+if exists (select * from INFORMATION_SCHEMA.ROUTINES where ROUTINE_SCHEMA=N'a2ui' and ROUTINE_NAME=N'Menu.Module.User.Load')
+	drop procedure a2ui.[Menu.Module.User.Load]
+go
+------------------------------------------------
+create procedure a2ui.[Menu.Module.User.Load]
+@TenantId int = null,
+@UserId bigint,
+@CompanyId bigint = null,
+@Mobile bit = 0
+as
+begin
+	set nocount on;
+	set transaction isolation level read uncommitted;
+
+	declare @isadmin bit;
+	set @isadmin = a2security.fn_isUserAdmin(@UserId);
+
+	declare @menutable table(Id bigint, [Level] int); 
+
+	if @isadmin = 0
+	begin
+		-- all parents
+		with P(Id, ParentId, [Level])
+		as
+		(
+			select m.Id, m.Parent, 0
+			from a2security.[Module.Acl] a inner join a2ui.Menu m on a.Module = m.Module
+			where a.UserId = @UserId and a.CanView = 1
+			union all
+			select m.Id, m.Parent, [Level] - 1
+				from a2ui.Menu m inner join P on m.Id=P.ParentId
+		)
+		insert into @menutable(Id)
+		select Id from P group by Id;
+	end
+
+	declare @RootId bigint = 1;
+	if @Mobile = 1
+		set @RootId = 2;
+
+	with RT as (
+		select Id=m0.Id, ParentId = m0.Parent, Module, [Level]=0
+			from a2ui.Menu m0
+			where m0.Id = 1
+		union all
+		select m1.Id, m1.Parent, m1.Module, RT.[Level]+1
+			from RT inner join a2ui.Menu m1 on m1.Parent = RT.Id
+	)
+	select [Menu!TMenu!Tree] = null, [Id!!Id]=RT.Id, [!TMenu.Menu!ParentId]=RT.ParentId,
+		[Menu!TMenu!Array] = null,
+		m.[Name], m.[Url], m.Icon, m.[Description], m.Help, m.ClassName
+	from RT
+		inner join a2ui.Menu m on RT.Id=m.Id
+		left join @menutable mt on m.Id = mt.Id
+	where @isadmin = 1 or mt.Id is not null
+	order by RT.[Level], m.[Order], RT.[Id];
+
+	-- companies
+	exec a2security.[User.Companies] @UserId = @UserId;
+
+	-- permissions
+	select [Permissions!TPerm!Array] = null, [Module], [Permissions]
+	from a2security.[Module.Acl] where UserId = @UserId;
+
+	-- system parameters
+	select [SysParams!TParam!Object]= null, [AppTitle], [AppSubTitle], [SideBarMode], [NavBarMode], [Pages]
+	from (select [Name], [Value] = StringValue from a2sys.SysParams) as s
+		pivot (min([Value]) for [Name] in ([AppTitle], [AppSubTitle], [SideBarMode], [NavBarMode], [Pages])) as p;
 end
 go
 ------------------------------------------------
@@ -360,6 +434,119 @@ begin
 		 insert into a2security.Acl ([Object], ObjectId, UserId, CanView) values (N'std:menu', @MenuId, @UserId, -1);
 	else if @Visible = 1
 		delete from a2security.Acl where [Object] = N'std:menu' and ObjectId = @MenuId and UserId = @UserId;
+end
+go
+------------------------------------------------
+if not exists(select * from INFORMATION_SCHEMA.DOMAINS where DOMAIN_SCHEMA = N'a2ui' and DOMAIN_NAME = N'Menu2.TableType')
+exec sp_executesql N'
+create type a2ui.[Menu2.TableType] as table
+(
+	Id bigint,
+	Parent bigint,
+	[Key] nchar(4),
+	[Feature] nchar(4),
+	[Name] nvarchar(255),
+	[Url] nvarchar(255),
+	Icon nvarchar(255),
+	[Model] nvarchar(255),
+	[Order] int,
+	[Description] nvarchar(255),
+	[Help] nvarchar(255),
+	Params nvarchar(255),
+	Feature2 nvarchar(255)
+)';
+go
+------------------------------------------------
+if not exists(select * from INFORMATION_SCHEMA.DOMAINS where DOMAIN_SCHEMA = N'a2ui' and DOMAIN_NAME = N'MenuModule.TableType')
+exec sp_executesql N'
+create type a2ui.[MenuModule.TableType] as table
+(
+	Id bigint,
+	Parent bigint,
+	[Name] nvarchar(255),
+	[Url] nvarchar(255),
+	Icon nvarchar(255),
+	[Model] nvarchar(255),
+	[Order] int,
+	[Description] nvarchar(255),
+	[Help] nvarchar(255),
+	Module nvarchar(16),
+	ClassName nvarchar(255)
+)';
+go
+------------------------------------------------
+if exists (select * from INFORMATION_SCHEMA.ROUTINES where ROUTINE_SCHEMA=N'a2ui' and ROUTINE_NAME=N'Menu.Merge')
+	drop procedure a2ui.[Menu.Merge]
+go
+------------------------------------------------
+create procedure a2ui.[Menu.Merge]
+@Menu a2ui.[Menu2.TableType] readonly,
+@Start bigint,
+@End bigint
+as
+begin
+	with T as (
+		select * from a2ui.Menu where Id >=@Start and Id <= @End
+	)
+	merge T as t
+	using @Menu as s
+	on t.Id = s.Id 
+	when matched then
+		update set
+			t.Id = s.Id,
+			t.Parent = s.Parent,
+			t.[Key] = s.[Key],
+			t.[Name] = s.[Name],
+			t.[Url] = s.[Url],
+			t.[Icon] = s.Icon,
+			t.[Order] = s.[Order],
+			t.Feature = s.Feature,
+			t.Model = s.Model,
+			t.[Description] = s.[Description],
+			t.Help = s.Help,
+			t.Params = s.Params
+	when not matched by target then
+		insert(Id, Parent, [Key], [Name], [Url], Icon, [Order], Feature, Model, [Description], Help, Params) values 
+		(Id, Parent, [Key], [Name], [Url], Icon, [Order], Feature, Model, [Description], Help, Params)
+	when not matched by source and t.Id >= @Start and t.Id < @End then 
+		delete;
+end
+go
+------------------------------------------------
+if exists (select * from INFORMATION_SCHEMA.ROUTINES where ROUTINE_SCHEMA=N'a2ui' and ROUTINE_NAME=N'MenuModule.Merge')
+	drop procedure a2ui.[MenuModule.Merge]
+go
+------------------------------------------------
+create procedure a2ui.[MenuModule.Merge]
+@Menu a2ui.[MenuModule.TableType] readonly,
+@Start bigint,
+@End bigint
+as
+begin
+	with T as (
+		select * from a2ui.Menu where Id >=@Start and Id <= @End
+	)
+	merge T as t
+	using @Menu as s
+	on t.Id = s.Id 
+	when matched then
+		update set
+			t.Id = s.Id,
+			t.Parent = s.Parent,
+			t.[Name] = s.[Name],
+			t.[Url] = s.[Url],
+			t.[Icon] = s.Icon,
+			t.[Order] = s.[Order],
+			t.Model = s.Model,
+			t.[Description] = s.[Description],
+			t.Help = s.Help,
+			t.Module = s.Module,
+			t.ClassName = s.ClassName
+	when not matched by target then
+		insert(Id, Parent, [Name], [Url], Icon, [Order], Model, [Description], Help, Module, ClassName) values 
+		(Id, Parent, [Name], [Url], Icon, [Order], Model, [Description], Help, Module, ClassName)
+	when not matched by source and t.Id >= @Start and t.Id < @End then 
+		delete;
 end
 go
 ------------------------------------------------
